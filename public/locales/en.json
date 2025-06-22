@@ -976,7 +976,7 @@
         "markup_required": "Markup Percentage is required when Use Markup is enabled"
     },
     "login": {
-        "welcome": "Welcome, !",
+        "welcome": "Welcome, Watan Telecom!",
         "signin_continue": "Sign in to continue",
         "email_label": "Email",
         "email_placeholder": "Email address",
