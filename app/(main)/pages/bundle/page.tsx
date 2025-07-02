@@ -537,7 +537,7 @@ const BundlePage = () => {
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         // header={header}
                         responsiveLayout="scroll"
                         paginator={false} // Disable PrimeReact's built-in paginator
@@ -851,7 +851,7 @@ const BundlePage = () => {
                                         </small>
                                     )}
                                 </div>
-                                {bundle.bundle_type==='credit'&&(
+                                {/* {bundle.bundle_type==='credit'&&( */}
                                 <div className="field col">
                                     <label htmlFor="name" style={{ fontWeight: 'bold' }}>
                                         {t('BUNDLE.FORM.INPUT.AMOUNT')}
@@ -878,7 +878,7 @@ const BundlePage = () => {
                                         </small>
                                     )}
                                 </div>
-                                )}
+                                {/* )} */}
                             </div>
                         </div>
                     </Dialog>

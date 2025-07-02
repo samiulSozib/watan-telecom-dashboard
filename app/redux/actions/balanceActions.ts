@@ -44,7 +44,7 @@ export const _addBalance = (balanceData: Balance,toast: React.RefObject<Toast>,t
     dispatch({ type: ADD_BALANCE_REQUEST });
 
     try {
-        console.log(balanceData)
+        //console.log(balanceData)
         const token = getAuthToken();
         const formData=new FormData()
         formData.append("reseller_id", balanceData.reseller?.id?.toString() || '0');
@@ -76,7 +76,7 @@ export const _addBalance = (balanceData: Balance,toast: React.RefObject<Toast>,t
             life: 3000,
         });
     } catch (error: any) {
-        console.log(error)
+        //console.log(error)
         dispatch({ type: ADD_BALANCE_FAIL, payload: error.message });
         toast.current?.show({
             severity: "error",

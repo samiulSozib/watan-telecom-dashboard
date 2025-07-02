@@ -74,7 +74,7 @@ const ResellerGroupPage = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        console.log(group_discounts);
+        //console.log(group_discounts);
     }, [dispatch, group_discounts]);
 
     const openNew = () => {
@@ -98,7 +98,7 @@ const ResellerGroupPage = () => {
 
     const saveResellerGroup = () => {
         setSubmitted(true);
-        console.log(groupDiscount)
+        //console.log(groupDiscount)
         //return;
         if (!groupDiscount.reseller_group || !groupDiscount.service || !groupDiscount.bundle || !groupDiscount.discount_type || !groupDiscount.discount_value) {
             toast.current?.show({
@@ -335,7 +335,7 @@ const ResellerGroupPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"

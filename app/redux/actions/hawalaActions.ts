@@ -18,7 +18,7 @@ export const _fetchHawalaList = (page: number = 1,search:string='') => async (di
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log(response)
+    //console.log(response)
     dispatch({
       type: FETCH_HAWALA_LIST_SUCCESS,
       payload: {
@@ -28,7 +28,7 @@ export const _fetchHawalaList = (page: number = 1,search:string='') => async (di
     });
     //console.log(response)
   } catch (error: any) {
-    console.log(error)
+    //console.log(error)
     dispatch({
       type: FETCH_HAWALA_LIST_FAIL,
       payload: error.message,
@@ -197,7 +197,7 @@ export const _changeHawalaStatus = (
     try {
 
       const token = getAuthToken();
-      console.log(token)
+      //console.log(token)
       const baseURL = `${process.env.NEXT_PUBLIC_BASE_URL}/hawala-orders`;
       let response;
 
@@ -220,7 +220,7 @@ export const _changeHawalaStatus = (
         default:
           throw new Error('Invalid order status');
       }
-      console.log(response)
+      //console.log(response)
       if (response.data.success === true) {
         toast.current?.show({
           severity: 'success',
@@ -238,7 +238,7 @@ export const _changeHawalaStatus = (
         throw new Error(response.data.message ||  t('HAWALA_STATUS_CHANGED_FAILED'),);
       }
     } catch (error: any) {
-        console.log(error)
+        //console.log(error)
       toast.current?.show({
         severity: 'error',
         summary: t('ERROR'),

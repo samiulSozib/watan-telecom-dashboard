@@ -131,7 +131,7 @@ const GroupPricingPage = () => {
     };
 
     const editGroupPricing = (groupPricing: GroupPricing) => {
-        console.log(groupPricing);
+        //console.log(groupPricing);
         setGroupPricing({ ...groupPricing });
         setGroupPricingDialog(true);
     };
@@ -142,7 +142,7 @@ const GroupPricingPage = () => {
     };
 
     const deleteGroupPricing = () => {
-        console.log(groupPricing);
+        //console.log(groupPricing);
         if (!groupPricing?.id) {
             console.error('Group Pricing ID is undefined.');
             return;
@@ -303,7 +303,7 @@ const GroupPricingPage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         responsiveLayout="scroll"
                     >

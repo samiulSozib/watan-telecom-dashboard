@@ -20,16 +20,16 @@ export const _fetchGroupPricingList = (search:string='') => async (dispatch: Dis
         Authorization: `Bearer ${token}`,
       },
     });
-    console.log(response)
+    //console.log(response)
     dispatch({
       type: FETCH_GROUP_PRICING_LIST_SUCCESS,
       payload: {
         data:response.data.data.group_pricings,
     },
     });
-    console.log(response)
+    //console.log(response)
   } catch (error: any) {
-    console.log(error)
+    //console.log(error)
     dispatch({
       type: FETCH_GROUP_PRICING_LIST_FAIL,
       payload: error.message,
@@ -66,7 +66,7 @@ export const _addGroupPricing = (newData: GroupPricing, toast: React.RefObject<T
         'Content-Type': 'multipart/form-data',
       },
     });
-    console.log(response)
+    //console.log(response)
     const _newData={...newData,id:response.data.data.group_pricing.id}
     dispatch({
       type: ADD_GROUP_PRICING_SUCCESS,
@@ -203,7 +203,7 @@ export const _deleteGroupPricing = (groupPriceId: number, toast: React.RefObject
       life: 3000,
     });
   } catch (error: any) {
-    console.log(error)
+    //console.log(error)
     dispatch({
       type: DELETE_GROUP_PRICING_FAIL,
       payload: error.message,

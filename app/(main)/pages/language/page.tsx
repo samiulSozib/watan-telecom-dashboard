@@ -253,7 +253,7 @@ const LanguagePage = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"

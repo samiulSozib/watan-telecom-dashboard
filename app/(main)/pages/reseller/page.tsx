@@ -316,6 +316,15 @@ const ResellerPage = () => {
         );
     };
 
+        const totalEarningBalanceBodyTemplate = (rowData: Reseller) => {
+        return (
+            <>
+                <span className="p-column-title">Total Earning Balance</span>
+                {rowData.total_earning_balance}
+            </>
+        );
+    };
+
     const availablePaymentBodyTemplate = (rowData: Reseller) => {
         const totalPayments = Number(rowData?.total_payments_received) || 0;
         const totalBalance = Number(rowData?.total_balance_sent) || 0;
@@ -533,7 +542,7 @@ const ResellerPage = () => {
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         // header={header}
 
                         responsiveLayout="scroll"
@@ -548,6 +557,7 @@ const ResellerPage = () => {
                             body={nameBodyTemplate}
                         ></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="phone" header={t('RESELLER.TABLE.COLUMN.PHONE')} body={phoneBodyTemplate}></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="total_earning_balance" header={t('TOTAL_EARNING_BALANCE')} body={totalEarningBalanceBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="balance" header={t('MENU.BALANCE')} body={balanceBodyTemplate}></Column>
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}

@@ -7,20 +7,23 @@ interface AppLayoutProps {
 }
 
 export const metadata: Metadata = {
-    title: 'Watan Telecom',
+    // title: 'Tak Telecom',
+    title: `${process.env.NEXT_PUBLIC_PROJECT_NAME}`,
     description: 'The ultimate collection of design-agnostic, flexible and accessible React UI Components.',
     robots: { index: false, follow: false },
     viewport: { initialScale: 1, width: 'device-width' },
     openGraph: {
         type: 'website',
-        title: 'Watan Telecom',
+        // title: 'Tak Telecom',
+        title: `${process.env.NEXT_PUBLIC_PROJECT_NAME}`,
         url: 'https://sakai.primereact.org/',
         description: 'The ultimate collection of design-agnostic, flexible and accessible React UI Components.',
         images: ['https://www.primefaces.org/static/social/sakai-react.png'],
         ttl: 604800,
     },
     icons: {
-        icon: '/layout/images/watan_telecom.png',
+        // icon: '/layout/images/tak_telecom.jpeg',
+        icon:`${process.env.NEXT_PUBLIC_PROJECT_LOGO}`
     },
 };
 

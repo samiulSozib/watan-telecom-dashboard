@@ -20,7 +20,7 @@ const Settings = () => {
     // Simulated API call function
     const syncTelegramGroups = async () => {
         setLoading(true);
-        console.log(token)
+        //console.log(token)
 
         try {
             // Call your actual API here
@@ -43,7 +43,7 @@ const Settings = () => {
               })
 
         } catch (error) {
-            console.log(error)
+            //console.log(error)
             Swal.fire({
                 title: t('ERROR'),
                 text: t('TELEGRAM_SYNC_FAILED'),

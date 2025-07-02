@@ -49,7 +49,7 @@ const OrderPage = () => {
     }, [dispatch, searchTag]);
 
     useEffect(() => {
-        console.log(hawalas);
+        //console.log(hawalas);
     }, [dispatch, hawalas]);
 
     const hideDialog = () => {
@@ -392,7 +392,7 @@ const OrderPage = () => {
                         globalFilter={globalFilter}
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         // header={header}
                         responsiveLayout="scroll"
                         paginator={false} // Disable PrimeReact's built-in paginator

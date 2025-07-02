@@ -285,7 +285,7 @@ const AdvertisementPage = () => {
                         // header={header}
                         responsiveLayout="scroll"
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr' }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                     >
                         <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="" header={t('ADVERTISEMENT.TABLE.COLUMN.ADVERTISEMENTIMAGE')} sortable body={imageBodyTemplate}></Column>

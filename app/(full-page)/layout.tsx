@@ -7,7 +7,8 @@ interface SimpleLayoutProps {
 }
 
 export const metadata: Metadata = {
-    title: 'Watan Telecom',
+    // title: 'Tak Telecom',
+    title: `${process.env.NEXT_PUBLIC_PROJECT_NAME}`,
     description: 'The ultimate collection of design-agnostic, flexible and accessible React UI Components.'
 };
 

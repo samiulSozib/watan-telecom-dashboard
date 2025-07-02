@@ -210,7 +210,8 @@ export interface Reseller {
     reseller_group_id:number,
     can_create_sub_resellers:number,
     sub_reseller_limit:number|string,
-    sub_resellers_can_create_sub_resellers:number
+    sub_resellers_can_create_sub_resellers:number,
+    total_earning_balance?:number|string
 }
 
 export interface User {
@@ -520,6 +521,61 @@ export interface GroupPricing{
     use_fixed_fee:boolean|null,
     use_markup:boolean|null
 
+}
+
+
+export interface HawalaCurrency {
+    id: number;
+    from_currency_id: number;
+    from_currency:Currency|null,
+    to_currency_id: number;
+    to_currency:Currency|null,
+    amount:number,
+    buy_rate: string|null;
+    sell_rate:string|null
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CustomerPricing{
+    id:number,
+    amount:string|null|number,
+    commission_type:string|null,
+    reseller:Reseller|null,
+    reseller_id:number|null|string,
+    service:Service|null,
+    service_id:number|string|null,
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EarningBalance{
+    id:number,
+    amount:string|number,
+    status:string|null,
+    reviewed_by:null|string|number,
+    reviewed_at:null|string,
+    admin_note:null|string,
+    created_at: string;
+    updated_at: string;
+    reseller:Reseller
+}
+
+
+export interface HelpArticle{
+    id:number,
+    title?:string|null,
+    description?:string|null,
+    related_image?:string|null|File,
+    slug?:string|null,
+    category?:string|null,
+    section?:string|null,
+    is_active?:boolean,
+    order?:string|number|null,
+    created_at: string;
+    updated_at: string;
 }
 
 // export interface UserList {

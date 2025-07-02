@@ -55,7 +55,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
     const logout = () => {
         dispatch(signOut());
         Swal.fire({
-            title: "Logout Success!",
+            title: t('LOGOUT_SUCCESS'),
             icon: "success",
             draggable: true
             });
@@ -111,7 +111,8 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                 gap: isRTL() ? '0.5rem' : '1rem',
                 }}>
                 <img
-                    src={`/layout/images/watan_telecom.png`}
+                    // src={`/layout/images/tak_telecom.jpeg`}
+                    src={`${process.env.NEXT_PUBLIC_PROJECT_LOGO}`}
                     width="47.22px"
                     height={'35px'}
                     alt="logo"
@@ -120,7 +121,8 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                     [isRTL() ? 'marginLeft' : 'marginRight']: isRTL() ? '0.5rem' : '1rem'
                     }}
                 />
-                <span>Watan</span>
+                {/* <span>Tak</span> */}
+                <span>{process.env.NEXT_PUBLIC_PROJECT_NAME}</span>
                 </Link>
 
             <button ref={menubuttonRef} type="button" className="p-link layout-menu-button layout-topbar-button" onClick={onMenuToggle}>
@@ -185,7 +187,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                 <i className="pi pi-user"></i>
                             </div>
                             <div>
-                                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Admin User</div>
+                                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{t('ADMIN_USER')}</div>
                                 {/* <div style={{ fontSize: '14px', color: '#666' }}>admin@bakhtertelecom.com</div> */}
                             </div>
                         </div>
@@ -209,7 +211,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                 onMouseEnter={() => setLanguageDropdownVisible(true)}
                                 onMouseLeave={() => setLanguageDropdownVisible(false)}
                             >
-                                <span style={{ flex: '1' }}>Language</span>
+                                <span style={{ flex: '1' }}>{t('LANGUAGE')}</span>
                                 <span
                                     style={{
                                         display: 'flex',
@@ -287,7 +289,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                     marginBottom: '8px',
                                 }}
                             >
-                                Account Setting
+                                {t('ACCOUNT_SETTING')}
                             </li>
                             <li
                                 style={{
@@ -298,7 +300,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((props, ref) => {
                                 }}
                                 onClick={logout}
                             >
-                                Signout
+                                {t('LOGOUT')}
                             </li>
                         </ul>
                     </div>
