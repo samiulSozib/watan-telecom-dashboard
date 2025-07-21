@@ -373,3 +373,36 @@ export const _deleteServiceCategory = (
     });
   }
 };
+
+
+export const _deleteSelectedServiceCategories = async (
+  serviceCategoriesIds: number[],
+  toast: React.RefObject<Toast>,
+  t: (key: string) => string
+) => {
+  const token = getAuthToken();
+
+  try {
+    for (const id of serviceCategoriesIds) {
+      await axios.delete(`${process.env.NEXT_PUBLIC_BASE_URL}/service_categories/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    toast.current?.show({
+      severity: 'success',
+      summary: t('SUCCESS'),
+      detail: t('SERVICE_CATEGORIES_DELETED'),
+      life: 3000,
+    });
+  } catch (error: any) {
+    toast.current?.show({
+      severity: 'error',
+      summary: t('ERROR'),
+      detail: t('SERVICE_CATEGORIES_DELETE_FAILED'),
+      life: 3000,
+    });
+  }
+};

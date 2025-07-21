@@ -33,6 +33,7 @@ import { hawalaCurrenciesReducer } from './hawalaCurrenciesReducer';
 import { customerPricingReducer } from './customerPricingReducer';
 import { earningBalanceReducer } from './earningBalanceReducer';
 import { helpArticlesReducer } from './helpArilesReducer';
+import { resellerInformationReducer } from './resellerInformationReducer';
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -68,7 +69,8 @@ const rootReducer=combineReducers({
     hawalaCurrenciesReducer:hawalaCurrenciesReducer,
     customerPricingReducer:customerPricingReducer,
     earningBalanceReducer:earningBalanceReducer,
-    helpArticlesReducer:helpArticlesReducer
+    helpArticlesReducer:helpArticlesReducer,
+    resellerInformationReducer:resellerInformationReducer
 })
 
 

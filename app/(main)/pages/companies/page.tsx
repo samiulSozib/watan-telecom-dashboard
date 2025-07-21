@@ -11,7 +11,7 @@ import { Toolbar } from 'primereact/toolbar';
 import { classNames } from 'primereact/utils';
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { _fetchCompanies,_deleteCompany, _addCompany,_editCompany } from '@/app/redux/actions/companyActions';
+import { _fetchCompanies,_deleteCompany, _addCompany,_editCompany, _deleteSelectedCompanies } from '@/app/redux/actions/companyActions';
 import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
@@ -119,7 +119,9 @@ const CompanyPage = () => {
 
     const editCompany = (company: Company) => {
         //console.log(company)
-        setCompany({ ...company,country_id:company.country_id,country:company.country});
+        const matching = countries.find((r: any) => r.id === company.country?.id);
+
+        setCompany({ ...company,country_id:company.country_id,country:matching});
 
         setCompanyDialog(true);
     };
@@ -140,13 +142,49 @@ const CompanyPage = () => {
     };
 
 
-    const confirmDeleteSelected = () => {
+
+
+
+        const confirmDeleteSelected = () => {
+        if (!selectedCompanies || (selectedCompanies as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteCompaniesDialog(true);
     };
 
+        const deleteSelectedCompanies = async() => {
+            if (!selectedCompanies || (selectedCompanies as any).length === 0) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('VALIDATION_ERROR'),
+                    detail: t('NO_SELECTED_ITEMS_FOUND'),
+                    life: 3000
+                });
+                return;
+            }
+
+            const selectedIds = (selectedCompanies as Company[]).map((company) => company.id);
+
+
+            await _deleteSelectedCompanies(selectedIds,toast,t)
+            dispatch(_fetchCompanies())
+
+
+
+
+            setSelectedCompanies(null)
+            setDeleteCompaniesDialog(false)
+        };
 
 
     const rightToolbarTemplate = () => {
+        const hasSelectedCompanies = selectedCompanies && (selectedCompanies as any).length > 0;
         return (
             <div className="flex justify-end items-center space-x-2">
                 <Button
@@ -157,14 +195,8 @@ const CompanyPage = () => {
                     onClick={openNew}
                     style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }}
                 />
-                <Button
-                    label={t("APP.GENERAL.DELETE")}
-                    icon="pi pi-trash"
-                    severity="danger"
-                    onClick={confirmDeleteSelected}
-                    disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    style={{ gap: ["ar", "fa", "ps", "bn"].includes(i18n.language) ? '0.5rem' : '' }}
-                />
+
+
             </div>
         );
     };
@@ -277,7 +309,7 @@ const CompanyPage = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteCompaniesDialog}/>
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success"  className={isRTL() ? 'rtl-button' : ''}  onClick={deleteSelectedCompanies}/>
         </>
     );
 
@@ -335,7 +367,7 @@ const CompanyPage = () => {
 
                         >
 
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="company_name" header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')} sortable body={nameBodyTemplate}></Column>
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} header={t('COMPANY.TABLE.COLUMN.COMPANYNAME')} body={imageBodyTemplate}></Column>
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} field="country_name" header={t('COMPANY.TABLE.COLUMN.COUNTRYNAME')} body={countryBodyTemplate}></Column>
@@ -455,7 +487,7 @@ const CompanyPage = () => {
                     <Dialog visible={deleteCompaniesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteCompaniesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {company && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {companies && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

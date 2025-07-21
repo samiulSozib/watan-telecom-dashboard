@@ -164,6 +164,9 @@ import {
     DELETE_PAYMENT_REQUEST,
     DELETE_PAYMENT_SUCCESS,
     DELETE_PAYMENT_FAIL,
+    ROLLBACK_PAYMENT_REQUEST,
+    ROLLBACK_PAYMENT_SUCCESS,
+    ROLLBACK_PAYMENT_FAIL,
 } from "../constants/paymentConstants";
 import { Payment } from "@/types/interface";
 import { Toast } from "primereact/toast";
@@ -173,18 +176,32 @@ const getAuthToken = () => {
 };
 
 // Fetch payment list
-export const _fetchPayments = () => async (dispatch: Dispatch) => {
+export const _fetchPayments = (page: number = 1, search: string = '', filters: any = {}) => async (dispatch: Dispatch) => {
     dispatch({ type: FETCH_PAYMENT_LIST_REQUEST });
 
     try {
         const token = getAuthToken();
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/payments`, {
+        const queryParams = new URLSearchParams();
+
+        queryParams.append('page', String(page));
+        queryParams.append('search', search);
+        queryParams.append('items_per_page',String(20))
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                queryParams.append(key, String(value));
+            }
+        });
+
+
+        const queryString = queryParams.toString();
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_BASE_URL}/payments?${queryString}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
         });
 
-        dispatch({ type: FETCH_PAYMENT_LIST_SUCCESS, payload: response.data.data.payments });
+        dispatch({ type: FETCH_PAYMENT_LIST_SUCCESS, payload: { data: response.data.data.payments, pagination: response.data.payload.pagination } });
 
     } catch (error: any) {
         dispatch({ type: FETCH_PAYMENT_LIST_FAIL, payload: error.message });
@@ -342,5 +359,38 @@ export const _deletePayment = (
             detail: t("PAYMENT_DELETE_FAILED"),
             life: 3000,
         });
+    }
+};
+
+
+// ROLLBACK a payment
+export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: ROLLBACK_PAYMENT_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response=await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/rollback/${balanceId}`,{}, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        console.log(response)
+        dispatch({ type: ROLLBACK_PAYMENT_SUCCESS, payload: balanceId });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("PAYMENT_ROLLBACKED"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: ROLLBACK_PAYMENT_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("PAYMENT_ROLLBACKED_FAILED"),
+            life: 3000,
+        });
+
     }
 };

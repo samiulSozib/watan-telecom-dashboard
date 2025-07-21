@@ -17,27 +17,26 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Payment, Currency } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addPayment, _deletePayment, _editPayment, _fetchPayments, _rollbackedPayment } from '@/app/redux/actions/paymentActions';
-import { paymentReducer } from '../../../redux/reducers/paymentReducer';
-import { resellerReducer } from '../../../redux/reducers/resellerReducer';
+import { _addPayment, _deletePayment, _editPayment, _fetchPayments } from '@/app/redux/actions/paymentActions';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { paymentMethodsReducer } from '../../../redux/reducers/paymentMethodReducer';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
 import { Calendar } from 'primereact/calendar';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
-import { Reseller } from '../../../../types/interface';
-import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
 import { Paginator } from 'primereact/paginator';
-import { generatePaymentExcelFile } from '../../utilities/generateExcel';
-import { SplitButton } from 'primereact/splitbutton';
+import { isRTL } from '../utilities/rtlUtil';
+import { customCellStyle } from '../utilities/customRow';
+import { fetchResellerPayments } from '@/app/redux/actions/resellerInformationActions';
+import { resellerInformationReducer } from '../../redux/reducers/resellerInformationReducer';
+import { generateBalanceExcelFile, generatePaymentExcelFile } from '../utilities/generateExcel';
 
-const PaymentPage = () => {
+interface ResellerBalancesProps {
+    resellerId: number;
+}
+
+const ResellerPayments = ({ resellerId }: ResellerBalancesProps) => {
     let emptyPayment: Payment = {
         id: 0,
         reseller_id: 0,
@@ -66,7 +65,7 @@ const PaymentPage = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { payments, loading, pagination } = useSelector((state: any) => state.paymentReducer);
+    const { payments, loading, payments_pagination } = useSelector((state: any) => state.resellerInformationReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { paymentMethods } = useSelector((state: any) => state.paymentMethodsReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
@@ -82,27 +81,13 @@ const PaymentPage = () => {
     const [activeFilters, setActiveFilters] = useState({});
     const [refreshing, setRefreshing] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
-    const [resellerSearchTerm, setResellerSearchTerm] = useState('');
-    const [rollbackDialog, setRollbackDialog] = useState(false);
 
     useEffect(() => {
-        dispatch(_fetchPayments(1, searchTag, activeFilters));
-        dispatch(_fetchResellers(1, '', '', 10000));
+        dispatch(fetchResellerPayments(resellerId, 1, searchTag, activeFilters));
+        dispatch(_fetchResellers());
         dispatch(_fetchPaymentMethods());
         dispatch(_fetchCurrencies());
-    }, [dispatch, searchTag, activeFilters]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (resellerSearchTerm) {
-                dispatch(_fetchResellers(1, resellerSearchTerm));
-            } else {
-                dispatch(_fetchResellers(1, ''));
-            }
-        }, 300); // Debounce for 300ms
-
-        return () => clearTimeout(timer);
-    }, [resellerSearchTerm, dispatch]);
+    }, [dispatch, searchTag, activeFilters, resellerId]);
 
     // Add this useEffect for click outside detection
     useEffect(() => {
@@ -160,10 +145,8 @@ const PaymentPage = () => {
     };
 
     const editPayment = (payment: Payment) => {
-        const matchingReseller = resellers.find((r: any) => r.id === payment.reseller?.id);
+        setPayment({ ...payment });
 
-        setPayment({ ...payment, reseller: matchingReseller });
-        console.log(payment.reseller);
         setPaymentDialog(true);
     };
 
@@ -183,24 +166,6 @@ const PaymentPage = () => {
 
     const confirmDeleteSelected = () => {
         setDeletePaymentsDialog(true);
-    };
-
-    const confirmRollbackPayment = (payment: Payment) => {
-        setPayment(payment);
-        setRollbackDialog(true);
-    };
-
-    const rollbackPayment = () => {
-        if (!payment?.id) {
-            console.error('Payment  ID is undefined.');
-            return;
-        }
-        dispatch(_rollbackedPayment(payment?.id, toast, t));
-        hideRollbackDialog();
-    };
-
-    const hideRollbackDialog = () => {
-        setRollbackDialog(false);
     };
 
     const rightToolbarTemplate = () => {
@@ -308,8 +273,8 @@ const PaymentPage = () => {
                             </div>
                         )}
                     </div>
-                    <Button label="Add Payment" icon="pi pi-plus" severity="success" onClick={openNew} />
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    {/* <Button label="Add Payment" icon="pi pi-plus" severity="success" onClick={openNew} /> */}
+                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
                 </div>
             </React.Fragment>
         );
@@ -372,27 +337,10 @@ const PaymentPage = () => {
     };
 
     const statusBodyTemplate = (rowData: Payment) => {
-        const status = rowData.status?.toLowerCase() || 'unknown';
-
-        const getStatusClass = (status: string) => {
-            switch (status.toLowerCase()) {
-                case 'rollback':
-                    return 'bg-yellow-100 text-yellow-800';
-                case 'completed':
-                    return 'bg-green-100 text-green-800';
-                case 'rejected':
-                    return 'bg-red-100 text-red-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayStatus = status !== 'unknown' ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
-
         return (
             <>
                 <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1 rounded-md text-xs font-semibold ${getStatusClass(rowData.status)}`}>{displayStatus}</span>
+                {rowData.status}
             </>
         );
     };
@@ -402,15 +350,6 @@ const PaymentPage = () => {
             <>
                 <span className="p-column-title">Note</span>
                 {rowData.notes}
-            </>
-        );
-    };
-
-    const performedByBodyTemplate = (rowData: Payment) => {
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-                {rowData.performed_by_name}
             </>
         );
     };
@@ -446,42 +385,13 @@ const PaymentPage = () => {
         );
     };
 
-    // const actionBodyTemplate = (rowData: Payment) => {
-    //     return (
-    //         <>
-    //             <div className="flex flex-row">
-    //                 <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPayment(rowData)} />
-    //                 <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePayment(rowData)} />
-    //             </div>
-    //         </>
-    //     );
-    // };
-
     const actionBodyTemplate = (rowData: Payment) => {
-        const items = [
-            {
-                label: 'Delete',
-                icon: 'pi pi-trash',
-                command: () => confirmDeletePayment(rowData)
-            }
-        ];
-
-        if (rowData.status !== 'rollbacked') {
-            items.push(
-                {
-                    label: 'Rollback',
-                    icon: 'pi pi-refresh',
-                    command: () => confirmRollbackPayment(rowData)
-                },
-                {
-                    label: 'Edit',
-                    icon: 'pi pi-pencil',
-                    command: () => editPayment(rowData)
-                }
-            );
-        }
-
-        return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        return (
+            <>
+                <Button icon="pi pi-pencil" rounded severity="success" className="mr-2" onClick={() => editPayment(rowData)} />
+                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeletePayment(rowData)} />
+            </>
+        );
     };
 
     // const header = (
@@ -512,12 +422,6 @@ const PaymentPage = () => {
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
         </>
     );
-    const rollbackDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackPayment} />
-        </>
-    );
 
     useEffect(() => {
         const currencyCode = payment?.reseller?.code || '';
@@ -535,7 +439,7 @@ const PaymentPage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchPayments(page, searchTag));
+        dispatch(fetchResellerPayments(resellerId, page, searchTag));
     };
 
     // Add these helper functions
@@ -547,17 +451,19 @@ const PaymentPage = () => {
     const handleRefresh = async () => {
         setRefreshing(true);
         await new Promise((res) => setTimeout(res, 1000));
-        dispatch(_fetchPayments(1, searchTag, activeFilters));
+        dispatch(fetchResellerPayments(resellerId, 1, searchTag, activeFilters));
         setRefreshing(false);
     };
 
-    const exportToExcel = async () => {
-        await generatePaymentExcelFile({
-            t,
-            toast,
-            all: true
-        });
-    };
+        const exportToExcel = async () => {
+            await generatePaymentExcelFile({
+                payments,
+                resellerId,
+                t,
+                toast,
+                all: true
+            });
+        };
 
     return (
         <div className="grid crud-demo -m-5">
@@ -573,8 +479,8 @@ const PaymentPage = () => {
                         selection={selectedCompanies}
                         onSelectionChange={(e) => setSelectedPayment(e.value as any)}
                         dataKey="id"
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        rows={payments_pagination?.items_per_page}
+                        totalRecords={payments_pagination?.total}
                         className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -599,15 +505,14 @@ const PaymentPage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.REMAININGPAYMENTAMOUNT')} body={remainingPaymentBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.NOTES')} body={noteBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PAYMENT.TABLE.COLUMN.PAYMENTDATE')} body={paymentDateBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
                     </DataTable>
 
                     <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        first={(payments_pagination?.page - 1) * payments_pagination?.items_per_page}
+                        rows={payments_pagination?.items_per_page}
+                        totalRecords={payments_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -625,25 +530,17 @@ const PaymentPage = () => {
                                         id="reseller"
                                         value={payment.reseller}
                                         options={resellers}
-                                        onChange={(e) => {
+                                        onChange={(e) =>
                                             setPayment((prev) => ({
                                                 ...prev,
                                                 reseller: e.value
-                                            }));
-                                        }}
+                                            }))
+                                        }
                                         optionLabel="reseller_name"
-                                        filter
-                                        filterBy="reseller_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                        showFilterClear
+                                        //optionValue='id'
                                         placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
                                         className="w-full"
-                                        panelClassName="min-w-[20rem]"
-                                        onFilter={(e) => {
-                                            setResellerSearchTerm(e.filter);
-                                        }}
                                     />
-
                                     {submitted && !payment.reseller && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
@@ -803,18 +700,10 @@ const PaymentPage = () => {
                             {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-
-                    {/* Rollback Confirmation Dialog */}
-                    <Dialog visible={rollbackDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={rollbackDialogFooter} onHide={hideRollbackDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
-                            {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
-                        </div>
-                    </Dialog>
                 </div>
             </div>
         </div>
     );
 };
 
-export default withAuth(PaymentPage);
+export default ResellerPayments;

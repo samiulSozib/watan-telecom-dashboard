@@ -17,24 +17,24 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Balance, Currency } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addBalance, _deleteBalance, _editBalance, _fetchBalances, _rollbackedBalance } from '@/app/redux/actions/balanceActions';
-import withAuth from '../../authGuard';
+import { _addBalance, _deleteBalance, _editBalance, _fetchBalances } from '@/app/redux/actions/balanceActions';
 import { useTranslation } from 'react-i18next';
-import { resellerReducer } from '../../../redux/reducers/resellerReducer';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
-import { currenciesReducer } from '../../../redux/reducers/currenciesReducer';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import { paymentMethodsReducer } from '../../../redux/reducers/paymentMethodReducer';
 import { _fetchPaymentMethods } from '@/app/redux/actions/paymentMethodActions';
 import { Calendar } from 'primereact/calendar';
-import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
-import { generateBalanceExcelFile } from '../../utilities/generateExcel';
+import { isRTL } from '../utilities/rtlUtil';
+import { customCellStyle } from '../utilities/customRow';
+import { fetchResellerBalances } from '@/app/redux/actions/resellerInformationActions';
 import { Paginator } from 'primereact/paginator';
-import { SplitButton } from 'primereact/splitbutton';
+import { generateBalanceExcelFile } from '../utilities/generateExcel';
 
-const BalancePage = () => {
+interface ResellerBalancesProps {
+    resellerId: number;
+}
+
+const ResellerBalances = ({ resellerId }: ResellerBalancesProps) => {
     let emptyBalance: Balance = {
         id: 0,
         reseller_id: 0,
@@ -66,7 +66,7 @@ const BalancePage = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { balances, loading, pagination } = useSelector((state: any) => state.balanceReducer);
+    const { balances, balances_pagination, loading } = useSelector((state: any) => state.resellerInformationReducer);
     const { currencies } = useSelector((state: any) => state.currenciesReducer);
     const { resellers } = useSelector((state: any) => state.resellerReducer);
     const { paymentMethods } = useSelector((state: any) => state.paymentMethodsReducer);
@@ -81,27 +81,13 @@ const BalancePage = () => {
     const [activeFilters, setActiveFilters] = useState({});
     const [refreshing, setRefreshing] = useState(false);
     const filterRef = useRef<HTMLDivElement>(null);
-    const [resellerSearchTerm, setResellerSearchTerm] = useState('');
-    const [rollbackDialog, setRollbackDialog] = useState(false);
 
     useEffect(() => {
-        dispatch(_fetchBalances(1, searchTag, activeFilters));
+        dispatch(fetchResellerBalances(resellerId, 1, searchTag,activeFilters));
         dispatch(_fetchCurrencies());
-        dispatch(_fetchResellers(1, '', '', 10000));
+        dispatch(_fetchResellers());
         dispatch(_fetchPaymentMethods());
-    }, [dispatch, searchTag, activeFilters]);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (resellerSearchTerm) {
-                dispatch(_fetchResellers(1, resellerSearchTerm));
-            } else {
-                dispatch(_fetchResellers(1, ''));
-            }
-        }, 300); // Debounce for 300ms
-
-        return () => clearTimeout(timer);
-    }, [resellerSearchTerm, dispatch]);
+    }, [dispatch, searchTag, resellerId,activeFilters]);
 
     const openNew = () => {
         setBalance(emptyBalance);
@@ -149,15 +135,10 @@ const BalancePage = () => {
     };
 
     const editBalance = (balance: Balance) => {
-        const matchingReseller = resellers.find((r: any) => r.id === balance.reseller?.id);
+        setBalance({ ...balance });
 
-        setBalance({ ...balance, reseller: matchingReseller });
         setBalanceDialog(true);
     };
-
-    useEffect(() => {
-        //console.log(balance.reseller)
-    }, [dispatch, balance]);
 
     const confirmDeleteBalance = (balance: Balance) => {
         setBalance(balance);
@@ -173,121 +154,114 @@ const BalancePage = () => {
         setDeleteBalanceDialog(false);
     };
 
-    const confirmRollbackBalance = (balance: Balance) => {
-        setBalance(balance);
-        setRollbackDialog(true);
-    };
-
-    const rollbackBalance = () => {
-        if (!balance?.id) {
-            console.error('Balance  ID is undefined.');
-            return;
-        }
-        dispatch(_rollbackedBalance(balance?.id, toast, t));
-        hideRollbackDialog();
-    };
-
     const confirmDeleteSelected = () => {
         setDeleteBalancesDialog(true);
-    };
-
-    const hideRollbackDialog = () => {
-        setRollbackDialog(false);
     };
 
     const rightToolbarTemplate = () => {
         return (
             <React.Fragment>
                 <div className="-m-1 my-2 flex flex-wrap gap-1 w-full">
-                    <Button
-                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
-                        label={t('RESELLER.BALANCETRANSACTION.ADDBALANCE')}
-                        icon="pi pi-plus"
-                        severity="success"
-                        className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
-                        onClick={openNew}
-                    />
+
                     <div className="flex-1 min-w-[100px]" ref={filterRef} style={{ position: 'relative' }}>
-                        <Button className="p-button-info w-full" label={t('FILTER')} icon="pi pi-filter" onClick={() => setFilterDialogVisible(!filterDialogVisible)} />
-                        {filterDialogVisible && (
-                            <div
-                                className="p-card p-fluid"
-                                style={{
-                                    position: 'absolute',
-                                    top: '100%',
-                                    left: isRTL() ? 0 : '',
-                                    right: isRTL() ? '' : 0,
-                                    width: '300px',
-                                    zIndex: 1000,
-                                    marginTop: '0.5rem',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <div className="p-card-body" style={{ padding: '1rem' }}>
-                                    <div className="grid">
-                                        {/* Transaction Type Filter */}
-                                        <div className="col-12">
-                                            <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
-                                            </label>
-                                            <Dropdown
-                                                id="transactionTypeFilter"
-                                                options={[
-                                                    { label: t('CREDIT'), value: 'credit' },
-                                                    { label: t('DEBIT'), value: 'debit' }
-                                                ]}
-                                                value={filters.filter_transaction_type}
-                                                onChange={(e) => setFilters({ ...filters, filter_transaction_type: e.value })}
-                                                placeholder={t('SELECT_TRANSACTION_TYPE')}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
+                    <Button
+                        className="p-button-info w-full"
+                        label={t('FILTER')}
+                        icon="pi pi-filter"
+                        onClick={() => setFilterDialogVisible(!filterDialogVisible)}
+                    />
+                    {filterDialogVisible && (
+                        <div
+                            className="p-card p-fluid"
+                            style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: isRTL() ? 0 : '',
+                                right: isRTL() ? '' : 0,
+                                width: '300px',
+                                zIndex: 1000,
+                                marginTop: '0.5rem',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            <div className="p-card-body" style={{ padding: '1rem' }}>
+                                <div className="grid">
+                                    {/* Transaction Type Filter */}
+                                    <div className="col-12">
+                                        <label htmlFor="transactionTypeFilter" style={{ fontSize: '0.875rem' }}>
+                                            {t('BALANCE.FORM.INPUT.TRANSACTIONTYPE')}
+                                        </label>
+                                        <Dropdown
+                                            id="transactionTypeFilter"
+                                            options={[
+                                                { label: t('CREDIT'), value: 'credit' },
+                                                { label: t('DEBIT'), value: 'debit' }
+                                            ]}
+                                            value={filters.filter_transaction_type}
+                                            onChange={(e) => setFilters({ ...filters, filter_transaction_type: e.value })}
+                                            placeholder={t('SELECT_TRANSACTION_TYPE')}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
 
-                                        {/* Date Range Filters */}
-                                        <div className="col-12">
-                                            <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('START_DATE')}
-                                            </label>
-                                            <InputText type="date" id="startDateFilter" value={filters.filter_startdate || ''} onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
+                                    {/* Date Range Filters */}
+                                    <div className="col-12">
+                                        <label htmlFor="startDateFilter" style={{ fontSize: '0.875rem' }}>
+                                            {t('START_DATE')}
+                                        </label>
+                                        <InputText
+                                            type="date"
+                                            id="startDateFilter"
+                                            value={filters.filter_startdate || ''}
+                                            onChange={(e) => setFilters({ ...filters, filter_startdate: e.target.value })}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
 
-                                        <div className="col-12">
-                                            <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
-                                                {t('END_DATE')}
-                                            </label>
-                                            <InputText type="date" id="endDateFilter" value={filters.filter_enddate || ''} onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })} style={{ width: '100%' }} />
-                                        </div>
+                                    <div className="col-12">
+                                        <label htmlFor="endDateFilter" style={{ fontSize: '0.875rem' }}>
+                                            {t('END_DATE')}
+                                        </label>
+                                        <InputText
+                                            type="date"
+                                            id="endDateFilter"
+                                            value={filters.filter_enddate || ''}
+                                            onChange={(e) => setFilters({ ...filters, filter_enddate: e.target.value })}
+                                            style={{ width: '100%' }}
+                                        />
+                                    </div>
 
-                                        {/* Action Buttons */}
-                                        <div className="col-12 mt-3 flex justify-content-between gap-2">
-                                            <Button
-                                                label={t('RESET')}
-                                                icon="pi pi-times"
-                                                className="p-button-secondary p-button-sm"
-                                                onClick={() => {
-                                                    setFilters({
-                                                        filter_transaction_type: null,
-                                                        filter_startdate: null,
-                                                        filter_enddate: null
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                label={t('APPLY')}
-                                                icon="pi pi-check"
-                                                className="p-button-sm"
-                                                onClick={() => {
-                                                    handleSubmitFilter(filters);
-                                                    setFilterDialogVisible(false);
-                                                }}
-                                            />
-                                        </div>
+                                    {/* Action Buttons */}
+                                    <div className="col-12 mt-3 flex justify-content-between gap-2">
+                                        <Button
+                                            label={t('RESET')}
+                                            icon="pi pi-times"
+                                            className="p-button-secondary p-button-sm"
+                                            onClick={() => {
+                                                setFilters({
+                                                    filter_transaction_type: null,
+                                                    filter_startdate: null,
+                                                    filter_enddate: null
+                                                });
+                                            }}
+                                        />
+                                        <Button
+                                            label={t('APPLY')}
+                                            icon="pi pi-check"
+                                            className="p-button-sm"
+                                            onClick={() => {
+                                                handleSubmitFilter(filters);
+                                                setFilterDialogVisible(false);
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                        </div>
+                    )}
+                </div>
+                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+
                 </div>
             </React.Fragment>
         );
@@ -341,51 +315,10 @@ const BalancePage = () => {
     };
 
     const statusBodyTemplate = (rowData: Balance) => {
-        const status = rowData.status?.toLowerCase() || 'unknown';
-
-        const getStatusClass = (status: string) => {
-            switch (status) {
-                case 'rollbacked':
-                    return 'bg-yellow-100 text-yellow-800';
-                case 'completed':
-                    return 'bg-green-100 text-green-800';
-                case 'rejected':
-                    return 'bg-red-100 text-red-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayStatus = status !== 'unknown' ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
-
         return (
             <>
                 <span className="p-column-title">Status</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusClass(status)}`}>{displayStatus}</span>
-            </>
-        );
-    };
-
-    const typeBodyTemplate = (rowData: Balance) => {
-        const type = rowData.transaction_type?.toLowerCase() || 'unknown';
-
-        const getTypeClass = (type: string) => {
-            switch (type) {
-                case 'debit':
-                    return 'bg-red-100 text-red-800';
-                case 'credit':
-                    return 'bg-blue-100 text-blue-800';
-                default:
-                    return 'bg-gray-100 text-gray-800';
-            }
-        };
-
-        const displayType = type !== 'unknown' ? type.charAt(0).toUpperCase() + type.slice(1) : 'Unknown';
-
-        return (
-            <>
-                <span className="p-column-title">Type</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getTypeClass(type)}`}>{displayType}</span>
+                {rowData.transaction_type}
             </>
         );
     };
@@ -395,15 +328,6 @@ const BalancePage = () => {
             <>
                 <span className="p-column-title">Description</span>
                 {rowData.description}
-            </>
-        );
-    };
-
-    const performedByBodyTemplate = (rowData: Balance) => {
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-                {rowData.performed_by_name}
             </>
         );
     };
@@ -439,40 +363,13 @@ const BalancePage = () => {
         );
     };
 
-    // const actionBodyTemplate = (rowData: Balance) => {
-    //     return (
-    //         <>
-    //             <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editBalance(rowData)} />
-    //             <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteBalance(rowData)} />
-    //         </>
-    //     );
-    // };
-
     const actionBodyTemplate = (rowData: Balance) => {
-        const items = [
-            {
-                label: 'Delete',
-                icon: 'pi pi-trash',
-                command: () => confirmDeleteBalance(rowData)
-            }
-        ];
-
-        if (rowData.status !== 'rollbacked') {
-            items.push(
-                {
-                    label: 'Rollback',
-                    icon: 'pi pi-refresh',
-                    command: () => confirmRollbackBalance(rowData)
-                },
-                {
-                    label: 'Edit',
-                    icon: 'pi pi-pencil',
-                    command: () => editBalance(rowData)
-                }
-            );
-        }
-
-        return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        return (
+            <>
+                <Button icon="pi pi-pencil" rounded severity="success" className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'} onClick={() => editBalance(rowData)} />
+                <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteBalance(rowData)} />
+            </>
+        );
     };
 
     // const header = (
@@ -504,13 +401,6 @@ const BalancePage = () => {
         </>
     );
 
-    const rollbackDialogFooter = (
-        <>
-            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackBalance} />
-        </>
-    );
-
     useEffect(() => {
         const currencyCode = balance?.reseller?.code || '';
 
@@ -524,7 +414,7 @@ const BalancePage = () => {
                 payment_currency_id: selectedCurrency.id
             }));
         }
-    }, [balance?.reseller?.code, currencies, balance]);
+    }, [balance?.reseller?.code, currencies]);
 
     const [resellerBalance, setResellerBalance] = useState<any>(null);
     const [resellerPayment, setResellerPayment] = useState<any>(null);
@@ -546,8 +436,10 @@ const BalancePage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchBalances(page, searchTag));
+        dispatch(fetchResellerBalances(resellerId, page, searchTag));
     };
+
+
 
     // Add this useEffect for click outside detection
     useEffect(() => {
@@ -563,15 +455,20 @@ const BalancePage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [filterDialogVisible]);
 
-    // Add these helper functions
-    const handleSubmitFilter = (filters: any) => {
-        const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
-        setActiveFilters(cleanedFilters);
-    };
+
+// Add these helper functions
+const handleSubmitFilter = (filters: any) => {
+    const cleanedFilters = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== null && value !== '')
+    );
+    setActiveFilters(cleanedFilters);
+};
+
 
     const exportToExcel = async () => {
         await generateBalanceExcelFile({
             balances,
+            resellerId,
             t,
             toast,
             all: true
@@ -592,8 +489,8 @@ const BalancePage = () => {
                         selection={selectedCompanies}
                         onSelectionChange={(e) => setSelectedBalance(e.value as any)}
                         dataKey="id"
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        rows={balances_pagination?.items_per_page}
+                        totalRecords={balances_pagination?.total}
                         className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -616,17 +513,15 @@ const BalancePage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.CURRENCY')} body={currencyBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.REMAINING_BALANCE')} body={remainingBalanceBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TYPE')} body={typeBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.DESCRIPTIONS')} body={descriptionBodyTemplate}></Column>
-                        <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('PERFORMED_BY')} body={performedByBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('BALANCE.TABLE.COLUMN.BALANCEDATE')} body={createdAtBodyTemplate}></Column>
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate}></Column>
                     </DataTable>
 
                     <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        first={(balances_pagination?.page - 1) * balances_pagination?.items_per_page}
+                        rows={balances_pagination?.items_per_page}
+                        totalRecords={balances_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -677,23 +572,16 @@ const BalancePage = () => {
                                             id="reseller"
                                             value={balance.reseller}
                                             options={resellers}
-                                            onChange={(e) => {
+                                            onChange={(e) =>
                                                 setBalance((prev) => ({
                                                     ...prev,
                                                     reseller: e.value
-                                                }));
-                                            }}
+                                                }))
+                                            }
                                             optionLabel="reseller_name"
-                                            filter
-                                            filterBy="reseller_name"
-                                            filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
-                                            showFilterClear
-                                            placeholder={t('PAYMENT.FORM.INPUT.RESELLER')}
+                                            //optionValue="id"
+                                            placeholder={t('BALANCE.FORM.RESELLER.PLACEHOLDER')}
                                             className="w-full"
-                                            panelClassName="min-w-[20rem]"
-                                            onFilter={(e) => {
-                                                setResellerSearchTerm(e.filter);
-                                            }}
                                         />
                                         {submitted && !balance.reseller && (
                                             <small className="p-invalid" style={{ color: 'red' }}>
@@ -924,18 +812,10 @@ const BalancePage = () => {
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
                         </div>
                     </Dialog>
-
-                    {/* Rollback Confirmation Dialog */}
-                    <Dialog visible={rollbackDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={rollbackDialogFooter} onHide={hideRollbackDialog}>
-                        <div className="flex align-items-center justify-content-center">
-                            <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
-                            {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
-                        </div>
-                    </Dialog>
                 </div>
             </div>
         </div>
     );
 };
 
-export default withAuth(BalancePage);
+export default ResellerBalances;

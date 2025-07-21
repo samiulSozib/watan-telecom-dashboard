@@ -13,7 +13,7 @@ import { useDispatch } from 'react-redux';
 import { _fetchCompanies, _deleteCompany, _addCompany, _editCompany } from '@/app/redux/actions/companyActions';
 import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
-import { _addService, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
+import { _addService, _deleteSelectedServices, _deleteService, _editService, _fetchServiceList } from '@/app/redux/actions/serviceActions';
 import { _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Company, Service } from '@/types/interface';
@@ -41,7 +41,7 @@ const Services = () => {
     const [deleteServiceDialog, setDeleteServiceDialog] = useState(false);
     const [deleteServicesDialog, setDeleteServicesDialog] = useState(false);
     const [service, setService] = useState<Service>(emptyService);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedServices, setSelectedServices] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -106,7 +106,9 @@ const Services = () => {
 
     const editService = (service: Service) => {
         //console.log(service)
-        setService({ ...service });
+        const matchingCompany = companies.find((r: any) => r.id === service.company?.id);
+
+        setService({ ...service, company: matchingCompany });
 
         setServiceDialog(true);
     };
@@ -126,10 +128,40 @@ const Services = () => {
     };
 
     const confirmDeleteSelected = () => {
+        if (!selectedServices || (selectedServices as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteServicesDialog(true);
     };
 
+    const deleteSelectedServices = async () => {
+        if (!selectedServices || (selectedServices as any).length === 0) {
+            toast.current?.show({
+                severity: 'error',
+                summary: t('VALIDATION_ERROR'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
+
+        const selectedIds = (selectedServices as Service[]).map((service) => service.id);
+
+        await _deleteSelectedServices(selectedIds, toast, t);
+        dispatch(_fetchServiceList());
+
+        setSelectedServices(null);
+        setDeleteServicesDialog(false);
+    };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedServices = selectedServices && (selectedServices as any).length > 0;
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2">
@@ -141,14 +173,15 @@ const Services = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        disabled={!selectedServices || !(selectedServices as any).length}
+                    /> */}
                 </div>
             </React.Fragment>
         );
@@ -243,7 +276,7 @@ const Services = () => {
     const deleteCompaniesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServicesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServices} />
         </>
     );
 
@@ -271,8 +304,8 @@ const Services = () => {
                     <DataTable
                         ref={dt}
                         value={services}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedServices}
+                        onSelectionChange={(e) => setSelectedServices(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -288,12 +321,12 @@ const Services = () => {
                         }
                         emptyMessage={t('DATA_TABLE.TABLE.NO_DATA')}
                         dir={isRTL() ? 'rtl' : 'ltr'}
-                        style={{ direction: isRTL() ? 'rtl' : 'ltr',fontFamily: "'iranyekan', sans-serif,iranyekan" }}
+                        style={{ direction: isRTL() ? 'rtl' : 'ltr', fontFamily: "'iranyekan', sans-serif,iranyekan" }}
                         globalFilter={globalFilter}
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column
                             style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="Company Name"
@@ -418,7 +451,7 @@ const Services = () => {
                     <Dialog visible={deleteServicesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompaniesDialogFooter} onHide={hideDeleteServicesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected companies?</span>}
+                            {service && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

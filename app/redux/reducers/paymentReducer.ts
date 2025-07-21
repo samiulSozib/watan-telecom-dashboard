@@ -12,19 +12,24 @@ import {
     DELETE_PAYMENT_REQUEST,
     DELETE_PAYMENT_SUCCESS,
     DELETE_PAYMENT_FAIL,
+    ROLLBACK_PAYMENT_SUCCESS,
+    ROLLBACK_PAYMENT_FAIL,
+    ROLLBACK_PAYMENT_REQUEST,
 } from "../constants/paymentConstants";
-import { Payment } from "@/types/interface";
+import { Pagination, Payment } from "@/types/interface";
 
 export interface PaymentState {
     loading: boolean;
     payments: Payment[];
     error: string | null;
+    pagination:Pagination|null
   }
 
 const initialState: PaymentState = {
     loading: false,
     payments: [],
     error: null,
+    pagination:null
 };
 
 export const paymentReducer = (state = initialState, action: AnyAction): PaymentState => {
@@ -33,6 +38,7 @@ export const paymentReducer = (state = initialState, action: AnyAction): Payment
         case ADD_PAYMENT_REQUEST:
         case EDIT_PAYMENT_REQUEST:
         case DELETE_PAYMENT_REQUEST:
+        case ROLLBACK_PAYMENT_REQUEST:
             return {
                 ...state,
                 loading: true,
@@ -43,7 +49,8 @@ export const paymentReducer = (state = initialState, action: AnyAction): Payment
             return {
                 ...state,
                 loading: false,
-                payments: action.payload,
+                payments: action.payload.data,
+                pagination:action.payload.pagination,
                 error: null,
             };
 
@@ -73,10 +80,23 @@ export const paymentReducer = (state = initialState, action: AnyAction): Payment
                 error: null,
             };
 
+            case ROLLBACK_PAYMENT_SUCCESS:
+                        return {
+                            ...state,
+                            loading: false,
+                            payments: state.payments.map((payment) =>
+                                payment.id === action.payload
+                                    ? { ...payment, status: 'rollbacked' }
+                                    : payment
+                            ),
+                            error: null,
+                        };
+
         case FETCH_PAYMENT_LIST_FAIL:
         case ADD_PAYMENT_FAIL:
         case EDIT_PAYMENT_FAIL:
         case DELETE_PAYMENT_FAIL:
+        case ROLLBACK_PAYMENT_FAIL:
             return {
                 ...state,
                 loading: false,

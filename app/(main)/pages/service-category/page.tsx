@@ -14,7 +14,7 @@ import { useSelector } from 'react-redux';
 import { Dropdown } from 'primereact/dropdown';
 import { _fetchCountries } from '@/app/redux/actions/countriesActions';
 import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
-import { _addServiceCategory, _deleteServiceCategory, _editServiceCategory, _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
+import { _addServiceCategory, _deleteSelectedServiceCategories, _deleteServiceCategory, _editServiceCategory, _fetchServiceCategories } from '@/app/redux/actions/serviceCategoryActions';
 import { AppDispatch } from '@/app/redux/store';
 import { ServiceCategory } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
@@ -42,7 +42,7 @@ const Category = () => {
     const [deleteServiceCategoryDialog, setDeleteServiceCategoryDialog] = useState(false);
     const [deleteServiceCategoriesDialog, setDeleteServiceCategoriesDialog] = useState(false);
     const [serviceCategory, setServiceCategory] = useState<ServiceCategory>(emptyServiceCategory);
-    const [selectedCompanies, setSelectedCompanyCode] = useState(null);
+    const [selectedServiceCategories, setSelectedServiceCategories] = useState(null);
     const [submitted, setSubmitted] = useState(false);
     const [globalFilter, setGlobalFilter] = useState('');
     const toast = useRef<Toast>(null);
@@ -116,11 +116,46 @@ const Category = () => {
         setDeleteServiceCategoryDialog(false);
     };
 
-    const confirmDeleteSelected = () => {
+
+
+        const confirmDeleteSelected = () => {
+        if (!selectedServiceCategories || (selectedServiceCategories as any).length === 0) {
+            toast.current?.show({
+                severity: 'warn',
+                summary: t('VALIDATION_WARNING'),
+                detail: t('NO_SELECTED_ITEMS_FOUND'),
+                life: 3000
+            });
+            return;
+        }
         setDeleteServiceCategoriesDialog(true);
     };
 
+        const deleteSelectedServiceCategories = async() => {
+            if (!selectedServiceCategories || (selectedServiceCategories as any).length === 0) {
+                toast.current?.show({
+                    severity: 'error',
+                    summary: t('VALIDATION_ERROR'),
+                    detail: t('NO_SELECTED_ITEMS_FOUND'),
+                    life: 3000
+                });
+                return;
+            }
+
+            const selectedIds = (selectedServiceCategories as ServiceCategory[]).map((category) => category.id);
+
+
+            await _deleteSelectedServiceCategories(selectedIds,toast,t)
+            dispatch(_fetchServiceCategories())
+
+
+
+            setSelectedServiceCategories(null)
+            setDeleteServiceCategoriesDialog(false)
+        };
+
     const rightToolbarTemplate = () => {
+        const hasSelectedServiceCategories = selectedServiceCategories && (selectedServiceCategories as any).length > 0;
         return (
             <React.Fragment>
                 <div className="flex justify-end items-center space-x-2  ">
@@ -132,14 +167,16 @@ const Category = () => {
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'ml-2' : 'mr-2'}
                         onClick={openNew}
                     />
-                    <Button
+
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('APP.GENERAL.DELETE')}
                         icon="pi pi-trash"
                         severity="danger"
                         onClick={confirmDeleteSelected}
-                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
-                    />
+                        disabled={!selectedServiceCategories || !(selectedServiceCategories as any).length}
+                    /> */}
+
                 </div>
             </React.Fragment>
         );
@@ -230,7 +267,7 @@ const Category = () => {
     const deleteServiceCategoriesDialogFooter = (
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideDeleteServiceCategoriesDialog} />
-            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={deleteSelectedServiceCategories}/>
         </>
     );
 
@@ -245,8 +282,8 @@ const Category = () => {
                     <DataTable
                         ref={dt}
                         value={serviceCategories}
-                        selection={selectedCompanies}
-                        onSelectionChange={(e) => setSelectedCompanyCode(e.value as any)}
+                        selection={selectedServiceCategories}
+                        onSelectionChange={(e) => setSelectedServiceCategories(e.value as any)}
                         dataKey="id"
                         paginator
                         rows={10}
@@ -267,7 +304,7 @@ const Category = () => {
                         // header={header}
                         responsiveLayout="scroll"
                     >
-                        <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column>
+                        {/* <Column selectionMode="multiple" headerStyle={{ width: '4rem' }}></Column> */}
                         <Column style={{...customCellStyleImage,textAlign: ["ar", "fa", "ps","bn"].includes(i18n.language) ? "right" : "left" }} header={t('SERVICECATEGORY.TABLE.COLUMN.IMAGE')} body={imageBodyTemplate}></Column>
 
                         <Column
@@ -386,7 +423,7 @@ const Category = () => {
                     <Dialog visible={deleteServiceCategoriesDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteServiceCategoriesDialogFooter} onHide={hideDeleteServiceCategoriesDialog}>
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                            {serviceCategory && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE')} the selected categories?</span>}
+                            {serviceCategory && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_DELETE_SELECTED_ITEMS')}</span>}
                         </div>
                     </Dialog>
                 </div>

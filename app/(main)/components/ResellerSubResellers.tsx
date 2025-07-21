@@ -23,7 +23,6 @@ import { Password } from 'primereact/password';
 import { _fetchDistricts } from '@/app/redux/actions/districtActions';
 import { _fetchProvinces } from '@/app/redux/actions/provinceActions';
 import { _fetchCurrencies } from '@/app/redux/actions/currenciesActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { resellerGroupReducer } from '@/app/redux/reducers/resellerGroupReducer';
 import { _fetchResellerGroups } from '@/app/redux/actions/resellerGroupActions';
@@ -31,12 +30,18 @@ import { InputSwitch } from 'primereact/inputswitch';
 import { SplitButton } from 'primereact/splitbutton';
 import { useRouter } from 'next/navigation';
 import { Paginator } from 'primereact/paginator';
-import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
-import { generateSubResellerExcelFile } from '../../utilities/generateExcel';
+import { isRTL } from '../utilities/rtlUtil';
+import { customCellStyleImage } from '../utilities/customRow';
+import { resellerInformationReducer } from '../../redux/reducers/resellerInformationReducer';
+import { fetchResellerSubResellers } from '@/app/redux/actions/resellerInformationActions';
+import { generateSubResellerExcelFile } from '../utilities/generateExcel';
 
-const ResellerPage = () => {
+interface ResellerBalancesProps {
+    resellerId: number;
+}
+
+const ResellerSubResellers = ({ resellerId }: ResellerBalancesProps) => {
     const emptyReseller: Reseller = {
         id: 0,
         user_id: 0,
@@ -89,7 +94,7 @@ const ResellerPage = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { resellers, loading, pagination, singleReseller } = useSelector((state: any) => state.resellerReducer);
+    const { sub_resellers, loading, sub_resellers_pagination, singleReseller } = useSelector((state: any) => state.resellerInformationReducer);
     const { countries } = useSelector((state: any) => state.countriesReducer);
     const { districts } = useSelector((state: any) => state.districtReducer);
     const { provinces } = useSelector((state: any) => state.provinceReducer);
@@ -109,13 +114,13 @@ const ResellerPage = () => {
     const filterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        dispatch(_fetchResellers(1, searchTag, activeFilters));
+        dispatch(fetchResellerSubResellers(resellerId,1, searchTag,activeFilters));
         dispatch(_fetchCountries());
         dispatch(_fetchDistricts());
         dispatch(_fetchProvinces());
         dispatch(_fetchCurrencies());
         dispatch(_fetchResellerGroups());
-    }, [dispatch, searchTag, activeFilters]);
+    }, [dispatch, searchTag,activeFilters,resellerId]);
 
     // Add this useEffect for click outside detection
     useEffect(() => {
@@ -133,7 +138,7 @@ const ResellerPage = () => {
 
     useEffect(() => {
         //console.log(resellers)
-    }, [dispatch, resellers]);
+    }, [dispatch, sub_resellers]);
 
     const openNew = () => {
         setReseller(emptyReseller);
@@ -196,10 +201,7 @@ const ResellerPage = () => {
 
     const editReseller = (reseller: Reseller) => {
         //console.log(reseller)
-        const matchingProvince = provinces.find((r:any) => r.id == reseller.province_id);
-
-
-        setReseller({ ...reseller, country_id: parseInt(reseller.country_id?.toString()),province:matchingProvince, province_id: parseInt(reseller.province_id?.toString()), districts_id: parseInt(reseller.districts_id?.toString()) });
+        setReseller({ ...reseller, country_id: parseInt(reseller.country_id?.toString()), province_id: parseInt(reseller.province_id?.toString()), districts_id: parseInt(reseller.districts_id?.toString()) });
 
         setResellerDialog(true);
     };
@@ -276,7 +278,7 @@ const ResellerPage = () => {
                                                 id="statusFilter"
                                                 options={[
                                                     { label: t('TABLE.GENERAL.ACTIVATE'), value: '1' },
-                                                    { label: t('TABLE.GENERAL.DEACTIVATE'), value: '0' }
+                                                    { label: t('TABLE.GENERAL.DEACTIVATE'), value: '0' },
                                                 ]}
                                                 value={filters.filter_status}
                                                 onChange={(e) => setFilters({ ...filters, filter_status: e.value })}
@@ -329,15 +331,24 @@ const ResellerPage = () => {
                             </div>
                         )}
                     </div>
-                    <Button
+                    {/* <Button
                         style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
                         label={t('RESELLER.TABLE.CREATERESELLER')}
                         icon="pi pi-plus"
                         severity="success"
                         className={['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '' : ''}
                         onClick={openNew}
-                    />
-                    <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+                    /> */}
+                    {/* <Button
+                        style={{ gap: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? '0.5rem' : '' }}
+                        label={t('APP.GENERAL.DELETE')}
+                        icon="pi pi-trash"
+                        severity="danger"
+                        onClick={confirmDeleteSelected}
+                        disabled={!selectedCompanies || !(selectedCompanies as any).length}
+                    /> */}
+                <Button className="flex-1 min-w-[100px]" label={t('EXPORT.EXPORT')} icon={`pi pi-file-excel`} severity="success" onClick={exportToExcel} />
+
                 </div>
             </React.Fragment>
         );
@@ -374,48 +385,6 @@ const ResellerPage = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'start' }}>
                         <span style={{ fontWeight: 'bold' }}>{rowData.email}</span>
                         {rowData.reseller_name}
-                    </div>
-                </div>
-            </>
-        );
-    };
-
-    const parentNameBodyTemplate = (rowData: Reseller) => {
-        if (!rowData.parent_reseller_name && !rowData.parent_reseller_profile_image_url) {
-            return null; // or return <></> if you prefer
-        }
-
-        return (
-            <>
-                <span className="p-column-title">Name</span>
-                <div
-                    style={{
-                        display: 'flex',
-                        textAlign: 'center',
-                        alignItems: 'center',
-                        gap: '10px'
-                    }}
-                >
-                    <img
-                        src={`${rowData.parent_reseller_profile_image_url}`}
-                        alt={rowData.parent_reseller_name || ''}
-                        className="shadow-2"
-                        style={{
-                            padding: '2px',
-                            width: '45px',
-                            height: '45px',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                        }}
-                    />
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            textAlign: 'start'
-                        }}
-                    >
-                        <span style={{ fontWeight: 'bold' }}>{rowData.parent_reseller_name}</span>
                     </div>
                 </div>
             </>
@@ -498,7 +467,7 @@ const ResellerPage = () => {
         return (
             <>
                 <span className="p-column-title">Preferred Currency</span>
-                {currency || '-'}
+                {rowData.user?.currency_preference_code || '-'}
             </>
         );
     };
@@ -507,7 +476,8 @@ const ResellerPage = () => {
         return (
             <>
                 <span className="p-column-title">Country</span>
-                {rowData.country}
+                {(rowData.country as Country)?.country_name || '-'}
+
             </>
         );
     };
@@ -617,7 +587,7 @@ const ResellerPage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchResellers(page, searchTag, activeFilters));
+        dispatch(fetchResellerSubResellers(resellerId,page, searchTag,activeFilters));
     };
 
     useEffect(() => {
@@ -655,18 +625,21 @@ const ResellerPage = () => {
         }
     }, [reseller?.province_id, districts]);
 
-    const handleSubmitFilter = (filters: any) => {
+     const handleSubmitFilter = (filters: any) => {
         const cleanedFilters = Object.fromEntries(Object.entries(filters).filter(([_, value]) => value !== null && value !== ''));
         setActiveFilters(cleanedFilters);
     };
 
-    const exportToExcel = async () => {
-        await generateSubResellerExcelFile({
-            t,
-            toast,
-            all: true
-        });
-    };
+
+            const exportToExcel = async () => {
+                await generateSubResellerExcelFile({
+                    sub_resellers,
+                    resellerId,
+                    t,
+                    toast,
+                    all: true
+                });
+            };
 
     return (
         <div className="grid crud-demo -m-5">
@@ -678,13 +651,13 @@ const ResellerPage = () => {
 
                     <DataTable
                         ref={dt}
-                        value={resellers}
+                        value={sub_resellers}
                         selection={selectedCompanies}
                         onRowClick={(e) => viewResellerDetails(e.data.id)}
                         dataKey="id"
                         paginator={false} // Disable PrimeReact's built-in paginator
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        rows={sub_resellers_pagination?.items_per_page}
+                        totalRecords={sub_resellers_pagination?.total}
                         className="datatable-responsive"
                         paginatorTemplate={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -749,14 +722,13 @@ const ResellerPage = () => {
                             header={t('RESELLER.TABLE.COLUMN.CURRENCYPREFERENCE')}
                             body={preferredCurrencyBodyTemplate}
                         ></Column>
-                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="name" header={t('PARENT_RESELLER_NAME')} sortable body={parentNameBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="country" header={t('RESELLER.TABLE.COLUMN.COUNTRY')} body={countryBodyTemplate}></Column>
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('BUNDLE.TABLE.FILTER.STATUS')} sortable body={statusBodyTemplate}></Column>
                     </DataTable>
                     <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        first={(sub_resellers_pagination?.page - 1) * sub_resellers_pagination?.items_per_page}
+                        rows={sub_resellers_pagination?.items_per_page}
+                        totalRecords={sub_resellers_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -958,17 +930,14 @@ const ResellerPage = () => {
                                     <Dropdown
                                         id="province_id"
                                         value={reseller.province_id}
-                                        options={provinces}
+                                        options={filteredProvinces}
                                         onChange={(e) =>
                                             setReseller((prev: Reseller) => ({
                                                 ...prev,
                                                 province_id: e.value
                                             }))
                                         }
-                                        filter
-                                        filterBy="province_name"
                                         optionLabel="province_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
                                         optionValue="id"
                                         placeholder="Choose a province"
                                         className="w-full"
@@ -989,17 +958,14 @@ const ResellerPage = () => {
                                     <Dropdown
                                         id="districts_id"
                                         value={reseller.districts_id}
-                                        options={districts}
+                                        options={filteredDistricts}
                                         onChange={(e) =>
                                             setReseller((prev: Reseller) => ({
                                                 ...prev,
                                                 districts_id: e.value
                                             }))
                                         }
-                                        filter
-                                        filterBy="district_name"
                                         optionLabel="district_name"
-                                        filterPlaceholder={t('ECOMMERCE.COMMON.SEARCH')}
                                         optionValue="id"
                                         placeholder="Choose a district"
                                         className="w-full"
@@ -1161,4 +1127,4 @@ const ResellerPage = () => {
     );
 };
 
-export default withAuth(ResellerPage);
+export default ResellerSubResellers;

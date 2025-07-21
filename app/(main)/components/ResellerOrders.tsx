@@ -18,20 +18,20 @@ import { AppDispatch } from '@/app/redux/store';
 import { Order } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
 import { _changeOrderStatus, _deleteOrder, _fetchOrders } from '@/app/redux/actions/orderActions';
-import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { SplitButton } from 'primereact/splitbutton';
-import { customCellStyle } from '../../utilities/customRow';
 import i18n from '@/i18n';
-import { isRTL } from '../../utilities/rtlUtil';
-import { Calendar } from 'primereact/calendar';
-import { companyReducer } from '../../../redux/reducers/companyReducer';
-import serviceReducer from '../../../redux/reducers/serviceReducer';
 import { _fetchServiceList } from '@/app/redux/actions/serviceActions';
-import { generateOrderExcelFile } from '../../utilities/generateExcel';
-import { InputTextarea } from 'primereact/inputtextarea';
+import { fetchResellerOrders } from '@/app/redux/actions/resellerInformationActions';
+import { isRTL } from '../utilities/rtlUtil';
+import { customCellStyle } from '../utilities/customRow';
+import { generateOrderExcelFile } from '../utilities/generateExcel';
 
-const OrderPage = () => {
+interface ResellerOrdersProps {
+    resellerId: number;
+}
+
+const ResellerOrders = ({ resellerId }: ResellerOrdersProps) => {
     const [orderDialog, setOrderDialog] = useState(false);
     const [deleteOrderDialog, setDeleteOrderDialog] = useState(false);
     const [deleteOrdersDialog, setDeleteOrdersDialog] = useState(false);
@@ -41,7 +41,7 @@ const OrderPage = () => {
     const toast = useRef<Toast>(null);
     const dt = useRef<DataTable<any>>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { orders, pagination, loading } = useSelector((state: any) => state.orderReducer);
+    const { orders, orders_pagination, loading } = useSelector((state: any) => state.resellerInformationReducer);
     const { companies } = useSelector((state: any) => state.companyReducer);
     const { services } = useSelector((state: any) => state.serviceReducer);
     const [order, setOrder] = useState<Order>();
@@ -50,8 +50,6 @@ const OrderPage = () => {
     const [statusChangeDialog, setStatusChangeDialog] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<number | null>();
     const [refreshing, setRefreshing] = useState(false);
-    const [rejectReasonDialog, setRejectReasonDialog] = useState(false);
-    const [rejectionReason, setRejectionReason] = useState('');
 
     // Add these state variables near your other state declarations
     const [filterDialogVisible, setFilterDialogVisible] = useState(false);
@@ -67,14 +65,14 @@ const OrderPage = () => {
     const [activeFilters, setActiveFilters] = useState({});
 
     useEffect(() => {
-        dispatch(_fetchOrders(1, searchTag)); // No filters initially
-    }, [dispatch, searchTag]);
+        dispatch(fetchResellerOrders(resellerId, 1, searchTag)); // No filters initially
+    }, [dispatch, searchTag, resellerId]);
 
     useEffect(() => {
         if (Object.keys(activeFilters).length > 0) {
-            dispatch(_fetchOrders(1, searchTag, activeFilters));
+            dispatch(fetchResellerOrders(resellerId, 1, searchTag, activeFilters));
         }
-    }, [dispatch, activeFilters, searchTag]);
+    }, [dispatch, activeFilters, searchTag, resellerId]);
 
     useEffect(() => {
         dispatch(_fetchCompanies());
@@ -143,7 +141,7 @@ const OrderPage = () => {
     const handleRefresh = async () => {
         setRefreshing(true);
         await new Promise((res) => setTimeout(res, 1000));
-        dispatch(_fetchOrders(1, searchTag));
+        dispatch(fetchResellerOrders(resellerId, 1, searchTag));
         setRefreshing(false);
     };
 
@@ -286,7 +284,7 @@ const OrderPage = () => {
                                                 onClick={() => {
                                                     // Apply filters here
                                                     // You might want to dispatch an action to fetch filtered orders
-                                                    //dispatch(_fetchOrders(1, searchTag, filters));
+                                                    //dispatch(fetchResellerOrders(resellerId,1, searchTag, filters));
                                                     //console.log(filters)
                                                     handleSubmitFilter(filters);
                                                     setFilterDialogVisible(false);
@@ -484,12 +482,12 @@ const OrderPage = () => {
             const statusText = rowData.status == 0 ? t('ORDER.STATUS.PENDING') : rowData.status == 1 ? t('ORDER.STATUS.CONFIRMED') : rowData.status == 2 ? t('ORDER.STATUS.REJECTED') : t('ORDER.STATUS.UNKNOWN');
 
             const dataToCopy = `
-📋 ${t('ORDER_DETAILS')}
-----------------
-🔹 ${t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}: ${rowData.rechargeble_account || '-'}
-🔹 ${t('ORDER.TABLE.COLUMN.BUNDLETITLE')}: ${rowData.bundle?.bundle_title || '-'}
-🔹 ${t('ORDER.TABLE.COLUMN.COMPANYNAME')}: ${rowData.bundle?.service?.company?.company_name || '-'}
-        `.trim();
+    📋 ${t('ORDER_DETAILS')}
+    ----------------
+    🔹 ${t('ORDER.TABLE.COLUMN.RECHARGEABLEACCOUNT')}: ${rowData.rechargeble_account || '-'}
+    🔹 ${t('ORDER.TABLE.COLUMN.BUNDLETITLE')}: ${rowData.bundle?.bundle_title || '-'}
+    🔹 ${t('ORDER.TABLE.COLUMN.COMPANYNAME')}: ${rowData.bundle?.service?.company?.company_name || '-'}
+            `.trim();
 
             copyToClipboard(dataToCopy);
         };
@@ -519,21 +517,58 @@ const OrderPage = () => {
         );
     };
 
-    const performedByBodyTemplate = (rowData: Order) => {
-        return (
-            <>
-                <span className="p-column-title">Performed By</span>
-                {rowData.performed_by_name}
-            </>
-        );
-    };
-
     // const actionBodyTemplate = (rowData: Order) => {
     //     return (
     //         <>
     //             {/* <Button icon="pi pi-pencil" rounded severity="success" className={["ar", "fa", "ps", "bn"].includes(i18n.language) ? "ml-2" : "mr-2"}  onClick={()=>editOrder(rowData)}/> */}
     //             <Button icon="pi pi-trash" rounded severity="warning" onClick={() => confirmDeleteOrder(rowData)} />
     //         </>
+    //     );
+    // };
+
+    // const actionBodyTemplate = (rowData: Order) => {
+    //     //const menuType = rowData.menuType; // Assuming `menuType` is part of your data
+
+    //     // Define the dropdown actions
+    //     const items = [
+    //         // {
+    //         //     label: 'Edit',
+    //         //     icon: 'pi pi-pencil',
+    //         //     command: () => editReseller(rowData),
+    //         //     //disabled: menuType === 'guest', // Example condition
+    //         // },
+    //         {
+    //             label: t('APP.GENERAL.DELETE'),
+    //             icon: 'pi pi-trash',
+    //             command: () => confirmDeleteOrder(rowData)
+    //             //disabled: menuType !== 'admin', // Example condition
+    //         },
+    //         {
+    //             label: t('ORDER.STATUS.CONFIRMED'),
+    //             icon: 'pi pi-check',
+    //             command: () => confirmChangeStatus(rowData, 1) // 1 for confirmed
+    //         },
+    //         {
+    //             label: t('ORDER.STATUS.UNDER_PROCESS'),
+    //             icon: 'pi pi-spinner',
+    //             command: () => confirmChangeStatus(rowData, 3) // 3 for under process
+    //         },
+    //         {
+    //             label: t('ORDER.STATUS.REJECTED'),
+    //             icon: 'pi pi-times',
+    //             command: () => confirmChangeStatus(rowData, 2) // 2 for rejected
+    //         }
+    //     ];
+
+    //     return (
+    //         <SplitButton
+    //             label=""
+    //             icon="pi pi-cog"
+    //             model={items}
+    //             className="p-button-rounded"
+    //             severity="info" // Optional: change severity or style
+    //             dir="ltr"
+    //         />
     //     );
     // };
 
@@ -584,32 +619,19 @@ const OrderPage = () => {
         return null;
     };
 
-    const confirmChangeStatus = (order: Order, newStatus: number) => {
-        // setOrder(order);
-        // setSelectedStatus(newStatus);
-        // setStatusChangeDialog(true);
-        setOrder(order);
-        setSelectedStatus(newStatus);
-
-        if (newStatus === 2) {
-            // If status is rejected (2)
-            setRejectReasonDialog(true); // Show reject reason dialog first
-        } else {
-            setStatusChangeDialog(true); // For other status changes, show normal confirmation
-        }
+    const performedByBodyTemplate = (rowData: Order) => {
+        return (
+            <>
+                <span className="p-column-title">Performed By</span>
+                {rowData.performed_by_name}
+            </>
+        );
     };
 
-    const finalizeRejection = () => {
-        if (!order?.id || selectedStatus === null) {
-            console.error('Order ID or status is undefined.');
-            return;
-        }
-
-        // Dispatch action with rejection reason
-        dispatch(_changeOrderStatus(order.id, selectedStatus as number, toast, t, rejectionReason));
-        setRejectReasonDialog(false);
-        setStatusChangeDialog(false);
-        setRejectionReason(''); // Reset rejection reason
+    const confirmChangeStatus = (order: Order, newStatus: number) => {
+        setOrder(order);
+        setSelectedStatus(newStatus);
+        setStatusChangeDialog(true);
     };
 
     const changeOrderStatus = () => {
@@ -655,12 +677,13 @@ const OrderPage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchOrders(page, searchTag));
+        dispatch(fetchResellerOrders(resellerId, page, searchTag));
     };
 
     const exportToExcel = async () => {
         await generateOrderExcelFile({
             orders,
+            resellerId,
             t,
             toast,
             all: true
@@ -708,8 +731,8 @@ const OrderPage = () => {
                         // header={header}
                         responsiveLayout="scroll"
                         paginator={false} // Disable PrimeReact's built-in paginator
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        rows={orders_pagination?.items_per_page}
+                        totalRecords={orders_pagination?.total}
                         currentPageReportTemplate={
                             isRTL()
                                 ? `${t('DATA_TABLE.TABLE.PAGINATOR.SHOWING')}` // localized RTL string
@@ -724,7 +747,6 @@ const OrderPage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={copyButtonBodyTemplate} headerStyle={{ width: '5rem' }}></Column>
 
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="" header={t('ORDER.TABLE.COLUMN.RESELLERNAME')} body={resellerNameBodyTemplate}></Column>
-
                         <Column
                             style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }}
                             field="rechargeble_account"
@@ -743,9 +765,9 @@ const OrderPage = () => {
                         <Column style={{ ...customCellStyle, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} field="status" header={t('ORDER.TABLE.COLUMN.STATUS')} body={statusBodyTemplate}></Column>
                     </DataTable>
                     <Paginator
-                        first={(pagination?.page - 1) * pagination?.items_per_page}
-                        rows={pagination?.items_per_page}
-                        totalRecords={pagination?.total}
+                        first={(orders_pagination?.page - 1) * orders_pagination?.items_per_page}
+                        rows={orders_pagination?.items_per_page}
+                        totalRecords={orders_pagination?.total}
                         onPageChange={(e) => onPageChange(e)}
                         template={
                             isRTL() ? 'RowsPerPageDropdown CurrentPageReport LastPageLink NextPageLink PageLinks PrevPageLink FirstPageLink' : 'FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown'
@@ -837,44 +859,10 @@ const OrderPage = () => {
                             )}
                         </div>
                     </Dialog>
-
-                    {/* reject dialog */}
-                    <Dialog
-                        visible={rejectReasonDialog}
-                        style={{ width: '450px' }}
-                        header={t('ORDER.REJECTION_REASON')}
-                        modal
-                        footer={
-                            <>
-                                <Button
-                                    label={t('APP.GENERAL.CANCEL')}
-                                    icon="pi pi-times"
-                                    severity="danger"
-                                    className={isRTL() ? 'rtl-button' : ''}
-                                    onClick={() => {
-                                        setRejectReasonDialog(false);
-                                        setRejectionReason('');
-                                    }}
-                                />
-                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={finalizeRejection} disabled={!rejectionReason.trim()} />
-                            </>
-                        }
-                        onHide={() => {
-                            setRejectReasonDialog(false);
-                            setRejectionReason('');
-                        }}
-                    >
-                        <div className="p-fluid">
-                            <div className="field">
-                                <label htmlFor="rejectionReason">{t('ORDER.REJECTION_REASON')}</label>
-                                <InputTextarea id="rejectionReason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} rows={3} autoFocus placeholder={t('ORDER.ENTER_REJECTION_REASON')} />
-                            </div>
-                        </div>
-                    </Dialog>
                 </div>
             </div>
         </div>
     );
 };
 
-export default withAuth(OrderPage);
+export default ResellerOrders;
