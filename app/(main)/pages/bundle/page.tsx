@@ -536,7 +536,7 @@ const BundlePage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchBundleList(page, searchTag));
+        dispatch(_fetchBundleList(page, searchTag,activeFilters));
     };
 
     useEffect(() => {
