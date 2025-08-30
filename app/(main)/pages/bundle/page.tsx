@@ -281,6 +281,7 @@ const BundlePage = () => {
                                             />
                                         </div>
 
+                                        {/* Service Filter */}
                                         <div className="col-12">
                                             <label htmlFor="serviceFilter" style={{ fontSize: '0.875rem' }}>
                                                 {t('ORDER.FILTER.SERVICE')}
@@ -545,7 +546,7 @@ const BundlePage = () => {
 
     const onPageChange = (event: any) => {
         const page = event.page + 1;
-        dispatch(_fetchBundleList(page, searchTag,activeFilters));
+        dispatch(_fetchBundleList(page, searchTag, activeFilters));
     };
 
     useEffect(() => {

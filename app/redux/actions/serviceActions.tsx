@@ -222,7 +222,8 @@ export const _addService = (newServiceData: Service, toast: React.RefObject<Toas
     const body = {
       service_name: newServiceData.service_name,
       service_category_id: newServiceData.service_category?.id,
-      company_id: newServiceData.company?.id
+      company_id: newServiceData.company?.id,
+      input_form_schema:newServiceData.input_form_schema
     };
 
     const token = getAuthToken();
@@ -265,7 +266,8 @@ export const _editService = (serviceId: number, updatedServiceData: Service, toa
     const body = {
       service_name: updatedServiceData.service_name,
       service_category_id: updatedServiceData.service_category?.id,
-      company_id: updatedServiceData.company?.id
+      company_id: updatedServiceData.company?.id,
+      input_form_schema:updatedServiceData.input_form_schema
     };
 
     const token = getAuthToken();

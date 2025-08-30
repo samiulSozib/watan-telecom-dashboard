@@ -111,6 +111,7 @@ export interface Company {
     created_at: string;
     updated_at: string;
     country: Country | null;
+    input_form_schema?:string|CustomField[]|null
 }
 
 export interface Country {
@@ -216,7 +217,17 @@ export interface Reseller {
     parent_reseller_name?:string|null,
     parent_reseller_profile_image_url?:string|null,
     parent_reseller_phone?:string|null
-
+    reseller_identity_attachment?:File|string|null,
+    extra_optional_proof?:File|string|null,
+    can_set_commission_group?:boolean,
+    can_set_selling_price_group?:boolean,
+    can_send_payment_request?:boolean,
+    can_ask_loan_balance?:boolean,
+    can_see_our_contact?:boolean,
+    can_see_parent_contact?:boolean,
+    can_send_hawala?:boolean,
+    max_loan_balance_request_amount?:number|string,
+    min_loan_balance_request_amount?:number|string
 }
 
 export interface User {
@@ -283,6 +294,7 @@ export interface ServiceCategory {
     deleted_at: string | null;
     created_at: string;
     updated_at: string;
+    input_form_schema?:string|CustomField[]|null
 }
 
 export interface Service {
@@ -295,6 +307,7 @@ export interface Service {
     updated_at: string;
     service_category: ServiceCategory | null;
     company: Company | null;
+    input_form_schema?:string|CustomField[]|null
 }
 
 export interface Supplier {
@@ -588,6 +601,14 @@ export interface HelpArticle{
 }
 
 
+export interface PaymentType{
+    id:number,
+    name:string,
+    description:string,
+    created_at: string;
+    updated_at: string;
+}
+
 
 
 // export interface UserList {
@@ -612,3 +633,77 @@ export interface HelpArticle{
 // reseller pagination, edit
 // reseller group delete api problem
 
+export interface CustomField {
+    name: string;
+    type: string;
+    label: {
+        en: string;
+        fa: string;
+    };
+    placeholder: {
+        en: string;
+        fa: string;
+    };
+    keyboard: string;
+    validators: {
+        required: boolean;
+        minLength: number;
+        maxLength: number;
+    };
+    examples: string[];
+}
+
+
+// types/interface.ts (add this to your existing interface file)
+export interface AppSettings {
+  is_instant_confirm: boolean;
+  maintenance_mode: boolean;
+  allow_new_registrations: boolean;
+  default_currency: string;
+  exchange_rate_usd_afn: number;
+  support_phone: string;
+  support_email: string;
+  support_whatsapp: string;
+  alternative_contact_phone: string;
+  alternative_whatsapp: string;
+  telegram_username: string;
+  telegram_url: string;
+  facebook_page_url: string;
+  instagram_handle: string;
+  instagram_url: string;
+  twitter_url: string;
+  tiktok_url: string;
+  youtube_url: string;
+  website_url: string;
+  app_name: string;
+  app_name_i18n: {
+    en: string;
+    fa: string;
+    ps: string;
+  };
+  app_slogan: string;
+  app_slogan_i18n: {
+    en: string;
+    fa: string;
+    ps: string;
+  };
+  logo_url: string;
+  mobile_app_primary_color: string;
+  mobile_app_secondary_color: string;
+  primary_color_font_color: string;
+  secondary_color_font_color: string;
+  extra_settings: {
+    max_order_per_day: number;
+    min_topup_amount: number;
+    max_topup_amount: number;
+  };
+  integration_settings: {
+    SETARAGAN_API_BASE_URL: string;
+    SETARAGAN_API_USERNAME: string;
+    SETARAGAN_API_AUTHKEY: string;
+    SETARAGAN_MSISDN: string;
+    SETARAGAN_REQUEST_ID: string;
+    TELEGRAM_WEBHOOK_URL: string;
+    TELEGRAM_BOT_TOKEN: string;
+  };
+}

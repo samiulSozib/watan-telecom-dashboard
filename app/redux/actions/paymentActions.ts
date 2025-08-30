@@ -167,6 +167,15 @@ import {
     ROLLBACK_PAYMENT_REQUEST,
     ROLLBACK_PAYMENT_SUCCESS,
     ROLLBACK_PAYMENT_FAIL,
+    INVALIDATE_PAYMENT_REQUEST,
+    INVALIDATE_PAYMENT_SUCCESS,
+    INVALIDATE_PAYMENT_FAIL,
+    VERIFY_PAYMENT_REQUEST,
+    VERIFY_PAYMENT_SUCCESS,
+    VERIFY_PAYMENT_FAIL,
+    VERIFY_PAYMENT_AND_SEND_TO_BALANCE_REQUEST,
+    VERIFY_PAYMENT_AND_SEND_TO_BALANCE_SUCCESS,
+    VERIFY_PAYMENT_AND_SEND_TO_BALANCE_FAIL,
 } from "../constants/paymentConstants";
 import { Payment } from "@/types/interface";
 import { Toast } from "primereact/toast";
@@ -185,7 +194,7 @@ export const _fetchPayments = (page: number = 1, search: string = '', filters: a
 
         queryParams.append('page', String(page));
         queryParams.append('search', search);
-        queryParams.append('items_per_page',String(20))
+        queryParams.append('items_per_page', String(20))
 
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== '') {
@@ -238,7 +247,7 @@ export const _addPayment = (
             }
         );
 
-        const newData = { ...paymentData, id: response.data.data.payment.id };
+        const newData = { ...paymentData, id: response.data.data.payment.id,status:response.data.data.payment.status };
         dispatch({ type: ADD_PAYMENT_SUCCESS, payload: newData });
 
         toast.current?.show({
@@ -369,7 +378,7 @@ export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toa
 
     try {
         const token = getAuthToken();
-        const response=await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/rollback/${balanceId}`,{}, {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/rollback/${balanceId}`, {}, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -394,3 +403,109 @@ export const _rollbackedPayment = (balanceId: number, toast: React.RefObject<Toa
 
     }
 };
+
+
+// VALIDATE a payment
+export const _invalidatePayment = (paymentId: number,notes:string, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: INVALIDATE_PAYMENT_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/${paymentId}/devalidate`, {
+            reason:notes
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        console.log(response)
+        dispatch({ type: INVALIDATE_PAYMENT_SUCCESS, payload: {paymentId,notes:response.data.data.payment?.notes} });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("PAYMENT_INVALIDATE"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: INVALIDATE_PAYMENT_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("PAYMENT_INVALIDATE_FAILED"),
+            life: 3000,
+        });
+
+    }
+};
+
+
+// VERIFY a payment
+export const _verifyPayment = (paymentId: number,notes:string, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: VERIFY_PAYMENT_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/${paymentId}/verify`, {
+            notes: notes
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        console.log(response)
+        dispatch({ type: VERIFY_PAYMENT_SUCCESS, payload: {paymentId,notes:response.data.data.payment?.notes} });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("PAYMENT_VERIFIED"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: VERIFY_PAYMENT_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("PAYMENT_VERIFIED_FAILED"),
+            life: 3000,
+        });
+
+    }
+};
+
+
+// VERIFY and send  payment
+export const _verifyAndSendPayment = (paymentId: number,notes:string, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: VERIFY_PAYMENT_AND_SEND_TO_BALANCE_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/payments/${paymentId}/verify-and-send`, {
+            notes: notes
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        console.log(response)
+        dispatch({ type: VERIFY_PAYMENT_AND_SEND_TO_BALANCE_SUCCESS, payload: {paymentId,notes:response.data.data.payment?.notes} });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("PAYMENT_VERIFIED_AND_SEND"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: VERIFY_PAYMENT_AND_SEND_TO_BALANCE_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("PAYMENT_VERIFIED_FAILED"),
+            life: 3000,
+        });
+
+    }
+};
+

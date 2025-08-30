@@ -17,7 +17,7 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Balance, Currency } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addBalance, _deleteBalance, _editBalance, _fetchBalances, _rollbackedBalance } from '@/app/redux/actions/balanceActions';
+import { _addBalance, _deleteBalance, _editBalance, _fetchBalances, _rejectBalance, _rollbackedBalance, _verifyBalance } from '@/app/redux/actions/balanceActions';
 import withAuth from '../../authGuard';
 import { useTranslation } from 'react-i18next';
 import { resellerReducer } from '../../../redux/reducers/resellerReducer';
@@ -83,6 +83,8 @@ const BalancePage = () => {
     const filterRef = useRef<HTMLDivElement>(null);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
     const [rollbackDialog, setRollbackDialog] = useState(false);
+    const [verifyDialog, setVerifyDialog] = useState(false);
+    const [rejectDialog, setRejectDialog] = useState(false);
 
     useEffect(() => {
         dispatch(_fetchBalances(1, searchTag, activeFilters));
@@ -187,12 +189,50 @@ const BalancePage = () => {
         hideRollbackDialog();
     };
 
+    const verifyBalance = () => {
+        if (!balance?.id) {
+            console.error('Balance ID is undefined.');
+            return;
+        }
+        // Dispatch your verify action here
+        dispatch(_verifyBalance(balance?.id, toast, t));
+        hideVerifyDialog();
+    };
+
+    const rejectBalance = () => {
+        if (!balance?.id) {
+            console.error('Balance ID is undefined.');
+            return;
+        }
+        // Dispatch your reject action here
+        dispatch(_rejectBalance(balance?.id, toast, t));
+        hideRejectDialog();
+    };
+
     const confirmDeleteSelected = () => {
         setDeleteBalancesDialog(true);
     };
 
     const hideRollbackDialog = () => {
         setRollbackDialog(false);
+    };
+
+    const hideVerifyDialog = () => {
+        setVerifyDialog(false);
+    };
+
+    const hideRejectDialog = () => {
+        setRejectDialog(false);
+    };
+
+    const confirmVerifyBalance = (balance: Balance) => {
+        setBalance(balance);
+        setVerifyDialog(true);
+    };
+
+    const confirmRejectBalance = (balance: Balance) => {
+        setBalance(balance);
+        setRejectDialog(true);
     };
 
     const rightToolbarTemplate = () => {
@@ -451,21 +491,33 @@ const BalancePage = () => {
     const actionBodyTemplate = (rowData: Balance) => {
         const items = [
             {
-                label: 'Delete',
+                label: t('DELETE'),
                 icon: 'pi pi-trash',
                 command: () => confirmDeleteBalance(rowData)
+            },
+
+            {
+                label: t('VERIFY'),
+                icon: 'pi pi-trash',
+                command: () => confirmVerifyBalance(rowData)
+            },
+
+            {
+                label: t('REJECT'),
+                icon: 'pi pi-trash',
+                command: () => confirmRejectBalance(rowData)
             }
         ];
 
         if (rowData.status !== 'rollbacked') {
             items.push(
                 {
-                    label: 'Rollback',
+                    label: t('ROLLBACK'),
                     icon: 'pi pi-refresh',
                     command: () => confirmRollbackBalance(rowData)
                 },
                 {
-                    label: 'Edit',
+                    label: t('EDIT'),
                     icon: 'pi pi-pencil',
                     command: () => editBalance(rowData)
                 }
@@ -508,6 +560,21 @@ const BalancePage = () => {
         <>
             <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRollbackDialog} />
             <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rollbackBalance} />
+        </>
+    );
+
+    // Add these dialog footers
+    const verifyDialogFooter = (
+        <>
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideVerifyDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={verifyBalance} />
+        </>
+    );
+
+    const rejectDialogFooter = (
+        <>
+            <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" className={isRTL() ? 'rtl-button' : ''} onClick={hideRejectDialog} />
+            <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" className={isRTL() ? 'rtl-button' : ''} onClick={rejectBalance} />
         </>
     );
 
@@ -930,6 +997,20 @@ const BalancePage = () => {
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
                             {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
+                        </div>
+                    </Dialog>
+
+                    <Dialog visible={verifyDialog} style={{ width: '450px' }} header={t('VERIFY_BALANCE')} modal footer={verifyDialogFooter} onHide={hideVerifyDialog}>
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-check-circle mr-3" style={{ fontSize: '2rem', color: 'var(--green-500)' }} />
+                            {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_VERIFY_THIS_BALANCE')}?</span>}
+                        </div>
+                    </Dialog>
+
+                    <Dialog visible={rejectDialog} style={{ width: '450px' }} header={t('REJECT_BALANCE')} modal footer={rejectDialogFooter} onHide={hideRejectDialog}>
+                        <div className="flex align-items-center justify-content-center">
+                            <i className="pi pi-times-circle mr-3" style={{ fontSize: '2rem', color: 'var(--red-500)' }} />
+                            {balance && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_REJECT_THIS_BALANCE')}?</span>}
                         </div>
                     </Dialog>
                 </div>

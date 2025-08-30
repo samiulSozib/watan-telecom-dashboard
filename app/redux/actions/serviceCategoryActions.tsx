@@ -213,6 +213,9 @@ export const _addServiceCategory = (
         formData.append('category_image_url', newCategory.category_image_url);
     }
 
+    formData.append("input_form_schema",JSON.stringify(newCategory.input_form_schema))
+
+
 
     const token = getAuthToken();
     const response = await axios.post(
@@ -278,6 +281,8 @@ export const _editServiceCategory = (
     if (updatedCategory.category_image_url && typeof updatedCategory.category_image_url !== 'string') {
         formData.append('category_image_url', updatedCategory.category_image_url);
     }
+        formData.append("input_form_schema",JSON.stringify(updatedCategory.input_form_schema))
+
 
     const token = getAuthToken();
     const response = await axios.post(

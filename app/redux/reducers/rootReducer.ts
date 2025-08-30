@@ -34,6 +34,8 @@ import { customerPricingReducer } from './customerPricingReducer';
 import { earningBalanceReducer } from './earningBalanceReducer';
 import { helpArticlesReducer } from './helpArilesReducer';
 import { resellerInformationReducer } from './resellerInformationReducer';
+import { paymentTypesReducer } from './paymentTypeReducer';
+import {appSettingsReducer} from './appSettingsReducer'
 
 const rootReducer=combineReducers({
     currenciesReducer:currenciesReducer,
@@ -70,7 +72,9 @@ const rootReducer=combineReducers({
     customerPricingReducer:customerPricingReducer,
     earningBalanceReducer:earningBalanceReducer,
     helpArticlesReducer:helpArticlesReducer,
-    resellerInformationReducer:resellerInformationReducer
+    resellerInformationReducer:resellerInformationReducer,
+    paymentTypesReducer:paymentTypesReducer,
+    appSettingsReducer:appSettingsReducer
 })
 
 

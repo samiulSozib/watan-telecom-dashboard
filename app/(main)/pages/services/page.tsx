@@ -23,6 +23,9 @@ import { useTranslation } from 'react-i18next';
 import { customCellStyleImage } from '../../utilities/customRow';
 import i18n from '@/i18n';
 import { isRTL } from '../../utilities/rtlUtil';
+import { parseInputFormSchema, stringifyInputFormSchema } from '../../utilities/parseInputFormSchema';
+import { Badge } from 'primereact/badge';
+import { CustomFields } from '../../components/CustomFields';
 
 const Services = () => {
     let emptyService: Service = {
@@ -34,7 +37,8 @@ const Services = () => {
         created_at: '',
         updated_at: '',
         service_category: null,
-        company: null
+        company: null,
+        input_form_schema: []
     };
 
     const [serviceDialog, setServiceDialog] = useState(false);
@@ -93,10 +97,43 @@ const Services = () => {
             });
             return;
         }
+
+        // Validate custom fields
+        const parsedFields = parseInputFormSchema(service.input_form_schema);
+        if (parsedFields && parsedFields.length > 0) {
+            for (let i = 0; i < parsedFields.length; i++) {
+                const field = parsedFields[i];
+                if (!field.name || field.name.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_NAME_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+
+                if (!field.label.en || field.label.en.trim() === '') {
+                    toast.current?.show({
+                        severity: 'error',
+                        summary: t('VALIDATION_ERROR'),
+                        detail: t('CUSTOM_FIELD_LABEL_REQUIRED'),
+                        life: 3000
+                    });
+                    return;
+                }
+            }
+        }
+
+        const serviceData = {
+            ...service,
+            input_form_schema: stringifyInputFormSchema(parsedFields) // Stringify for API
+        };
+
         if (service.id && service.id !== 0) {
-            dispatch(_editService(service.id, service, toast, t));
+            dispatch(_editService(service.id, serviceData, toast, t));
         } else {
-            dispatch(_addService(service, toast, t));
+            dispatch(_addService(serviceData, toast, t));
         }
 
         setServiceDialog(false);
@@ -108,7 +145,7 @@ const Services = () => {
         //console.log(service)
         const matchingCompany = companies.find((r: any) => r.id === service.company?.id);
 
-        setService({ ...service, company: matchingCompany });
+        setService({ ...service, company: matchingCompany, input_form_schema: parseInputFormSchema(service.input_form_schema) });
 
         setServiceDialog(true);
     };
@@ -242,6 +279,16 @@ const Services = () => {
         );
     };
 
+    const customFieldsBodyTemplate = (rowData: Service) => {
+        const fieldCount = parseInputFormSchema(rowData.input_form_schema).length;
+        return (
+            <>
+                <span className="p-column-title">Custom Fields</span>
+                {fieldCount > 0 ? <Badge value={fieldCount} severity="info" /> : <span className="text-color-secondary">{rowData.input_form_schema?.length.toString()}</span>}
+            </>
+        );
+    };
+
     const actionBodyTemplate = (rowData: Service) => {
         return (
             <>
@@ -348,6 +395,8 @@ const Services = () => {
                             sortable
                             body={serviceCategoryNameBodyTemplate}
                         ></Column>
+                        <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} header={t('TOTAL_CUSTOM_FIELD')} body={customFieldsBodyTemplate}></Column>
+
                         <Column style={{ ...customCellStyleImage, textAlign: ['ar', 'fa', 'ps', 'bn'].includes(i18n.language) ? 'right' : 'left' }} body={actionBodyTemplate} headerStyle={{ minWidth: '10rem' }}></Column>
                     </DataTable>
 
@@ -435,6 +484,16 @@ const Services = () => {
                                 </div>
                             </div>
                         </div>
+                        <CustomFields
+                            fields={parseInputFormSchema(service.input_form_schema)}
+                            onFieldsChange={(updatedFields) =>
+                                setService({
+                                    ...service,
+                                    input_form_schema: updatedFields // Keep as array for local state
+                                })
+                            }
+                            submitted={submitted}
+                        />{' '}
                     </Dialog>
 
                     <Dialog visible={deleteServiceDialog} style={{ width: '450px' }} header={t('TABLE.GENERAL.CONFIRM')} modal footer={deleteCompanyDialogFooter} onHide={hideDeleteServiceDialog}>

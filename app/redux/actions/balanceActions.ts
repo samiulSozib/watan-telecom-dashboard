@@ -16,6 +16,12 @@ import {
     ROLLBACK_BALANCE_REQUEST,
     ROLLBACK_BALANCE_SUCCESS,
     ROLLBACK_BALANCE_FAIL,
+    VERIFY_BALANCE_REQUEST,
+    VERIFY_BALANCE_SUCCESS,
+    VERIFY_BALANCE_FAIL,
+    REJECT_BALANCE_REQUEST,
+    REJECT_BALANCE_SUCCESS,
+    REJECT_BALANCE_FAIL,
 } from '../constants/balanceConstants';
 import { Balance } from "@/types/interface";
 import { Toast } from "primereact/toast";
@@ -223,4 +229,74 @@ export const _rollbackedBalance = (balanceId: number, toast: React.RefObject<Toa
 
     }
 };
+
+// VERIFY a balance
+export const _verifyBalance = (balanceId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: VERIFY_BALANCE_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response=await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/balances/${balanceId}/verify`, {},{
+
+            headers: {
+                Authorization: `Bearer ${token}`,
+
+            },
+        });
+        console.log(response)
+        dispatch({ type: VERIFY_BALANCE_SUCCESS, payload: balanceId });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("BALANCE_VERIFIED"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: VERIFY_BALANCE_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("BALANCE_VERIFICATION_FAILED"),
+            life: 3000,
+        });
+
+    }
+};
+
+
+// REJECT a balance
+export const _rejectBalance = (balanceId: number, toast: React.RefObject<Toast>, t: (key: string) => string) => async (dispatch: Dispatch) => {
+    dispatch({ type: REJECT_BALANCE_REQUEST });
+
+    try {
+        const token = getAuthToken();
+        const response=await axios.post(`${process.env.NEXT_PUBLIC_BASE_URL}/balances/${balanceId}/reject`, {},{
+
+            headers: {
+                Authorization: `Bearer ${token}`,
+
+            },
+        });
+        console.log(response)
+        dispatch({ type: REJECT_BALANCE_SUCCESS, payload: balanceId });
+        toast.current?.show({
+            severity: "success",
+            summary: t("SUCCESS"),
+            detail: t("BALANCE_REJECTED"),
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.log(error)
+        dispatch({ type: REJECT_BALANCE_FAIL, payload: error.message });
+        toast.current?.show({
+            severity: "error",
+            summary: t("ERROR"),
+            detail: t("BALANCE_REJECTION_FAILED"),
+            life: 3000,
+        });
+
+    }
+};
+
 

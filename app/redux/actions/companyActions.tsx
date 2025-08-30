@@ -87,6 +87,8 @@ export const _addCompany = (newCompany: Company,toast: React.RefObject<Toast>,t:
         formData.append('company_logo', newCompany.company_logo);
     }
 
+    formData.append("input_form_schema", JSON.stringify(newCompany.input_form_schema || []))
+
     formData.append('country_id', newCompany.country?.id?.toString()||'');
 
     formData.append('telegram_chat_id', newCompany.telegram_chat_id?.id?.toString()||'');
@@ -144,6 +146,8 @@ export const _editCompany = (updatedCompany: Company,toast: React.RefObject<Toas
     if (updatedCompany.company_logo && typeof updatedCompany.company_logo !== 'string') {
         formData.append('company_logo', updatedCompany.company_logo);
     }
+        formData.append("input_form_schema", JSON.stringify(updatedCompany.input_form_schema || []))
+
 
     formData.append('country_id', updatedCompany.country?.id?.toString() || '');
     formData.append('telegram_chat_id', updatedCompany.telegram_chat_id?.id?.toString() || '');

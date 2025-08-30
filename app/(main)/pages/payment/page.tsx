@@ -17,7 +17,7 @@ import { _fetchTelegramList } from '@/app/redux/actions/telegramActions';
 import { AppDispatch } from '@/app/redux/store';
 import { Payment, Currency } from '@/types/interface';
 import { ProgressBar } from 'primereact/progressbar';
-import { _addPayment, _deletePayment, _editPayment, _fetchPayments, _rollbackedPayment } from '@/app/redux/actions/paymentActions';
+import { _addPayment, _deletePayment, _editPayment, _fetchPayments, _invalidatePayment, _rollbackedPayment, _verifyAndSendPayment, _verifyPayment } from '@/app/redux/actions/paymentActions';
 import { paymentReducer } from '../../../redux/reducers/paymentReducer';
 import { resellerReducer } from '../../../redux/reducers/resellerReducer';
 import { _fetchResellers } from '@/app/redux/actions/resellerActions';
@@ -36,6 +36,7 @@ import { isRTL } from '../../utilities/rtlUtil';
 import { Paginator } from 'primereact/paginator';
 import { generatePaymentExcelFile } from '../../utilities/generateExcel';
 import { SplitButton } from 'primereact/splitbutton';
+import { Checkbox } from 'primereact/checkbox';
 
 const PaymentPage = () => {
     let emptyPayment: Payment = {
@@ -84,6 +85,13 @@ const PaymentPage = () => {
     const filterRef = useRef<HTMLDivElement>(null);
     const [resellerSearchTerm, setResellerSearchTerm] = useState('');
     const [rollbackDialog, setRollbackDialog] = useState(false);
+    const [invalidateDialog, setInvalidateDialog] = useState(false);
+    const [invalidateNotes, setInvalidateNotes] = useState('');
+    const [verifyDialog, setVerifyDialog] = useState(false);
+    const [verifyAndSendDialog, setVerifyAndSendDialog] = useState(false);
+    const [verificationNotes, setVerificationNotes] = useState('');
+    const [showVerifyNotes, setShowVerifyNotes] = useState(false);
+    const [showVerifyAndSendNotes, setShowVerifyAndSendNotes] = useState(false);
 
     useEffect(() => {
         dispatch(_fetchPayments(1, searchTag, activeFilters));
@@ -139,7 +147,7 @@ const PaymentPage = () => {
 
     const savePayment = () => {
         setSubmitted(true);
-        if (!payment.reseller || !payment.amount || !payment.notes || !payment.payment_method || !payment.currency || !payment.payment_date) {
+        if (!payment.reseller || !payment.amount || !payment.payment_method || !payment.currency || !payment.payment_date) {
             toast.current?.show({
                 severity: 'error',
                 summary: t('VALIDATION_ERROR'),
@@ -199,8 +207,77 @@ const PaymentPage = () => {
         hideRollbackDialog();
     };
 
+    const confirmInvalidatePayment = (payment: Payment) => {
+        setPayment(payment);
+        setInvalidateNotes('');
+        setInvalidateDialog(true);
+    };
+
+    const handleInvalidatePayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        dispatch(_invalidatePayment(payment?.id, invalidateNotes, toast, t));
+
+        setInvalidateDialog(false);
+    };
+
+    const hideInvalidateDialog = () => {
+        setInvalidateDialog(false);
+    };
+
     const hideRollbackDialog = () => {
         setRollbackDialog(false);
+    };
+
+    const handleVerifyPayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        const notes = showVerifyNotes ? verificationNotes : '';
+        dispatch(_verifyPayment(payment?.id, notes, toast, t));
+        hideVerifyDialog();
+    };
+
+    const handleVerifyAndSendPayment = () => {
+        if (!payment?.id) {
+            console.error('Payment ID is undefined.');
+            return;
+        }
+
+        const notes = showVerifyAndSendNotes ? verificationNotes : '';
+        dispatch(_verifyAndSendPayment(payment?.id, notes, toast, t));
+        hideVerifyAndSendDialog();
+    };
+
+    const hideVerifyDialog = () => {
+        setVerifyDialog(false);
+        setShowVerifyNotes(false);
+        setVerificationNotes('');
+    };
+
+    const hideVerifyAndSendDialog = () => {
+        setVerifyAndSendDialog(false);
+        setShowVerifyAndSendNotes(false);
+        setVerificationNotes('');
+    };
+
+    const confirmVerifyPayment = (payment: Payment) => {
+        setPayment(payment);
+        setVerificationNotes('');
+        setShowVerifyNotes(false);
+        setVerifyDialog(true);
+    };
+
+    const confirmVerifyAndSendPayment = (payment: Payment) => {
+        setPayment(payment);
+        setVerificationNotes('');
+        setShowVerifyAndSendNotes(false);
+        setVerifyAndSendDialog(true);
     };
 
     const rightToolbarTemplate = () => {
@@ -382,6 +459,10 @@ const PaymentPage = () => {
                     return 'bg-green-100 text-green-800';
                 case 'rejected':
                     return 'bg-red-100 text-red-800';
+                case 'failed':
+                    return 'bg-red-100 text-red-800';
+                case 'pending':
+                    return 'bg-yellow-100 text-red-800';
                 default:
                     return 'bg-gray-100 text-gray-800';
             }
@@ -458,27 +539,62 @@ const PaymentPage = () => {
     // };
 
     const actionBodyTemplate = (rowData: Payment) => {
-        const items = [
-            {
-                label: 'Delete',
-                icon: 'pi pi-trash',
-                command: () => confirmDeletePayment(rowData)
-            }
-        ];
+        const isRollbacked = rowData.status === 'rollbacked';
+        const isCompleted = rowData.status === 'completed';
+        const isPending = rowData.status === 'pending';
 
-        if (rowData.status !== 'rollbacked') {
+        const items = [];
+
+        // Always include Delete
+        items.push({
+            label: t('Delete'),
+            icon: 'pi pi-trash',
+            command: () => confirmDeletePayment(rowData),
+            disabled: isRollbacked // Disabled only if rollbacked
+        });
+
+        if (isRollbacked) {
+            // All other actions are disabled (only Delete is shown but disabled above)
+            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
+        }
+
+        if (isCompleted) {
+            items.push({
+                label: t('Rollback'),
+                icon: 'pi pi-replay',
+                command: () => confirmRollbackPayment(rowData)
+            });
+        } else if (isPending) {
+            // Only show full set if not done/rollbacked/confirmed
             items.push(
                 {
-                    label: 'Rollback',
-                    icon: 'pi pi-refresh',
+                    label: t('Invalidate'),
+                    icon: 'pi pi-times-circle',
+                    command: () => confirmInvalidatePayment(rowData)
+                },
+                {
+                    label: t('Verify'),
+                    icon: 'pi pi-check-circle',
+                    command: () => confirmVerifyPayment(rowData)
+                },
+                {
+                    label: t('Verify_and_send'),
+                    icon: 'pi pi-check-square',
+                    command: () => confirmVerifyAndSendPayment(rowData)
+                },
+                {
+                    label: t('Rollback'),
+                    icon: 'pi pi-replay',
                     command: () => confirmRollbackPayment(rowData)
                 },
                 {
-                    label: 'Edit',
+                    label: t('Edit'),
                     icon: 'pi pi-pencil',
                     command: () => editPayment(rowData)
                 }
             );
+        } else {
+            return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
         }
 
         return <SplitButton label="" model={items} className="p-button-rounded" severity="info" dir="ltr" icon="pi pi-cog" />;
@@ -693,11 +809,11 @@ const PaymentPage = () => {
                                         cols={30}
                                         placeholder={t('PAYMENT.FORM.INPUT.NOTES')}
                                     />
-                                    {submitted && !payment.notes && (
+                                    {/* {submitted && !payment.notes && (
                                         <small className="p-invalid" style={{ color: 'red' }}>
                                             {t('THIS_FIELD_IS_REQUIRED')}
                                         </small>
-                                    )}
+                                    )} */}
                                 </div>
                             </div>
 
@@ -809,6 +925,85 @@ const PaymentPage = () => {
                         <div className="flex align-items-center justify-content-center">
                             <i className="pi pi-refresh mr-3" style={{ fontSize: '2rem' }} />
                             {payment && <span>{t('ARE_YOU_SURE_YOU_WANT_TO_ROLLBACK')}?</span>}
+                        </div>
+                    </Dialog>
+
+                    {/* invalidate dialog */}
+                    <Dialog
+                        visible={invalidateDialog}
+                        style={{ width: '450px' }}
+                        header={t('INVALIDATE_PAYMENT')}
+                        modal
+                        onHide={hideInvalidateDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideInvalidateDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleInvalidatePayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field">
+                                <label htmlFor="invalidateNotes">{t('NOTES')}</label>
+                                <InputTextarea id="invalidateNotes" value={invalidateNotes} onChange={(e) => setInvalidateNotes(e.target.value)} rows={3} placeholder={t('ENTER_INVALIDATION_REASON')} autoFocus />
+                            </div>
+                        </div>
+                    </Dialog>
+                    {/* Verify Payment Dialog */}
+                    <Dialog
+                        visible={verifyDialog}
+                        style={{ width: '450px' }}
+                        header={t('VERIFY_PAYMENT')}
+                        modal
+                        onHide={hideVerifyDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideVerifyDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleVerifyPayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field-checkbox mb-3">
+                                <Checkbox inputId="showVerifyNotes" checked={showVerifyNotes} onChange={(e) => setShowVerifyNotes(e.checked ?? false)} />
+                                <label htmlFor="showVerifyNotes">{t('ADD_NOTES')}</label>
+                            </div>
+
+                            {showVerifyNotes && (
+                                <div className="field">
+                                    <label htmlFor="verificationNotes">{t('NOTES')}</label>
+                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                </div>
+                            )}
+                        </div>
+                    </Dialog>
+
+                    {/* Verify and Send Payment Dialog */}
+                    <Dialog
+                        visible={verifyAndSendDialog}
+                        style={{ width: '450px' }}
+                        header={t('VERIFY_AND_SEND_PAYMENT')}
+                        modal
+                        onHide={hideVerifyAndSendDialog}
+                        footer={
+                            <>
+                                <Button label={t('APP.GENERAL.CANCEL')} icon="pi pi-times" severity="danger" onClick={hideVerifyAndSendDialog} />
+                                <Button label={t('FORM.GENERAL.SUBMIT')} icon="pi pi-check" severity="success" onClick={handleVerifyAndSendPayment} />
+                            </>
+                        }
+                    >
+                        <div className="p-fluid">
+                            <div className="field-checkbox mb-3">
+                                <Checkbox inputId="showVerifyAndSendNotes" checked={showVerifyAndSendNotes} onChange={(e) => setShowVerifyAndSendNotes(e.checked ?? false)} />
+                                <label htmlFor="showVerifyAndSendNotes">{t('ADD_NOTES')}</label>
+                            </div>
+
+                            {showVerifyAndSendNotes && (
+                                <div className="field">
+                                    <label htmlFor="verificationNotes">{t('NOTES')}</label>
+                                    <InputTextarea id="verificationNotes" value={verificationNotes} onChange={(e) => setVerificationNotes(e.target.value)} rows={3} placeholder={t('ENTER_VERIFICATION_NOTES')} />
+                                </div>
+                            )}
                         </div>
                     </Dialog>
                 </div>

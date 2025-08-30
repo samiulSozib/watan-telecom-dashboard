@@ -15,6 +15,12 @@ import {
     ROLLBACK_BALANCE_SUCCESS,
     ROLLBACK_BALANCE_REQUEST,
     ROLLBACK_BALANCE_FAIL,
+    VERIFY_BALANCE_REQUEST,
+    REJECT_BALANCE_REQUEST,
+    VERIFY_BALANCE_SUCCESS,
+    REJECT_BALANCE_SUCCESS,
+    VERIFY_BALANCE_FAIL,
+    REJECT_BALANCE_FAIL,
 } from '../constants/balanceConstants';
 import { Balance, Pagination } from '@/types/interface';
 
@@ -39,6 +45,8 @@ export const balanceReducer = (state = initialState, action: AnyAction): Balance
         case EDIT_BALANCE_REQUEST:
         case DELETE_BALANCE_REQUEST:
         case ROLLBACK_BALANCE_REQUEST:
+        case VERIFY_BALANCE_REQUEST:
+        case REJECT_BALANCE_REQUEST:
             return {
                 ...state,
                 loading: true,
@@ -92,11 +100,37 @@ export const balanceReducer = (state = initialState, action: AnyAction): Balance
                 error: null,
             };
 
+            case VERIFY_BALANCE_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                balances: state.balances.map((balance) =>
+                    balance.id === action.payload
+                        ? { ...balance, status: 'verified' }
+                        : balance
+                ),
+                error: null,
+            };
+
+            case REJECT_BALANCE_SUCCESS:
+            return {
+                ...state,
+                loading: false,
+                balances: state.balances.map((balance) =>
+                    balance.id === action.payload
+                        ? { ...balance, status: 'rejected' }
+                        : balance
+                ),
+                error: null,
+            };
+
         case FETCH_BALANCES_FAIL:
         case ADD_BALANCE_FAIL:
         case EDIT_BALANCE_FAIL:
         case DELETE_BALANCE_FAIL:
         case ROLLBACK_BALANCE_FAIL:
+        case VERIFY_BALANCE_FAIL:
+        case REJECT_BALANCE_FAIL:
             return {
                 ...state,
                 loading: false,
